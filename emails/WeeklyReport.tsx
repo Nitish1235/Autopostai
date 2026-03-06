@@ -171,11 +171,10 @@ export function WeeklyReportEmail({
                   creditsRemaining < 10
                     ? 'rgba(255, 69, 58, 0.12)'
                     : 'rgba(48, 209, 88, 0.12)',
-                border: `1px solid ${
-                  creditsRemaining < 10
+                border: `1px solid ${creditsRemaining < 10
                     ? 'rgba(255, 69, 58, 0.25)'
                     : 'rgba(48, 209, 88, 0.25)'
-                }`,
+                  }`,
               }}
             >
               {creditsRemaining} videos
@@ -335,7 +334,7 @@ export async function sendWeeklyReportEmail(params: {
   followerGrowth: number
   creditsRemaining: number
 }): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key')
 
   await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? 'noreply@autopostai.com',

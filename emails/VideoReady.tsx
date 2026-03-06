@@ -229,7 +229,7 @@ export async function sendVideoReadyEmail(params: {
   thumbnailUrl?: string
   approvalMode: 'review' | 'autopilot'
 }): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key')
 
   const subject =
     params.approvalMode === 'review'

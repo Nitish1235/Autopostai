@@ -1,12 +1,13 @@
 # ── Stage 1: Install dependencies ─────────────────────
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # ── Stage 2: Build the application ────────────────────
 FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -14,6 +15,12 @@ COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Inject dummy env vars for Next.js build-time tracing (SDK initialization checks)
+ARG OPENAI_API_KEY="dummy_key_for_build"
+ARG UPSTASH_REDIS_REST_URL="https://dummy.url"
+ARG UPSTASH_REDIS_REST_TOKEN="dummy_token"
+ARG REDIS_URL="redis://dummy:6379"
 
 # Build Next.js (standalone output)
 RUN npm run build
@@ -27,8 +34,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install FFmpeg for video processing (render worker, AI video audio mux)
-RUN apk add --no-cache ffmpeg
+# Install OS dependencies: FFmpeg for video processing, OpenSSL for Prisma
+RUN apk add --no-cache ffmpeg openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

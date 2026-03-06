@@ -27,7 +27,7 @@ export const onVideoCreated = inngest.createFunction(
       if (user.credits <= 3 && user.notifyCreditLow && user.email) {
         // Dynamic import to avoid loading Resend at top-level
         const { Resend } = await import('resend')
-        const resend = new Resend(process.env.RESEND_API_KEY)
+        const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key')
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://autopostai.com'
 
