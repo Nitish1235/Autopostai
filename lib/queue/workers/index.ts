@@ -2,6 +2,8 @@
 // This file starts all BullMQ workers when the
 // worker container boots via Dockerfile.worker.
 
+import http from 'http'
+
 import { scriptWorker } from './scriptWorker'
 import { imageWorker } from './imageWorker'
 import { voiceWorker } from './voiceWorker'
@@ -20,6 +22,18 @@ console.log(`[worker] Render worker initialized (concurrency: 1)`)
 console.log(`[worker] Publish worker initialized (concurrency: 2)`)
 console.log(`[worker] AI Video worker initialized (concurrency: 2)`)
 
+// ── Health Check Server (Cloud Run requirement) ──────
+
+const PORT = process.env.PORT || 8080
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' })
+  res.end('AutoPost AI Worker is running!')
+})
+
+server.listen(PORT, () => {
+  console.log(`[worker] Health check server listening on port ${PORT}`)
+})
+
 // ── Graceful Shutdown ────────────────────────────────
 
 async function shutdown() {
@@ -32,6 +46,11 @@ async function shutdown() {
     publishWorker.close(),
     aiVideoWorker.close(),
   ])
+
+  server.close(() => {
+    console.log('[worker] Health check server closed.')
+  })
+
   console.log('[worker] All workers closed. Exiting.')
   process.exit(0)
 }
