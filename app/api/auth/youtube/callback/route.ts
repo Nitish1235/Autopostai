@@ -7,8 +7,8 @@ const YOUTUBE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET ?? ''
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  url: process.env.UPSTASH_REDIS_REST_URL || 'https://dummy.upstash.io',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || 'dummy_token',
 })
 
 // ── Helper: Exchange Code for Tokens ─────────────────

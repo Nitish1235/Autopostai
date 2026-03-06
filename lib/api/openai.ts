@@ -8,9 +8,16 @@ import {
 import type { ScriptSegment } from '@/types'
 
 // ── OpenAI Client ────────────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let cachedOpenai: OpenAI | null = null
+
+function getOpenAI() {
+  if (!cachedOpenai) {
+    cachedOpenai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || 'dummy_key_for_build',
+    })
+  }
+  return cachedOpenai
+}
 
 // ── Generate Script ──────────────────────────────────
 
@@ -27,7 +34,7 @@ export async function generateScript(params: {
   const segmentCount = getSegmentCount(format)
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       temperature: 0.8,
       max_tokens: 4000,
@@ -122,7 +129,7 @@ export async function generateTopics(params: {
   const { niche, count, existingTopics } = params
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       temperature: 1.0,
       max_tokens: 1000,
@@ -183,7 +190,7 @@ export async function generateCaptions(params: {
   const { title, topic, niche, platform } = params
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       temperature: 0.9,
       max_tokens: 500,
@@ -245,7 +252,7 @@ export async function generateReplyOptions(
   videoTopic: string
 ): Promise<string[]> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       temperature: 0.9,
       max_tokens: 400,
