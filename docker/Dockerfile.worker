@@ -1,6 +1,6 @@
 # ── Stage 1: Install dependencies ─────────────────────
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -24,8 +24,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install FFmpeg for video rendering and audio muxing
-RUN apk add --no-cache ffmpeg
+# Install FFmpeg for video rendering and audio muxing, OpenSSL for Prisma
+RUN apk add --no-cache ffmpeg openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
