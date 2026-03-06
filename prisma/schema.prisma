@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── USER ──────────────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  image         String?
+  googleId      String?   @unique
+
+  // Plan & credits
+  plan          Plan      @default(free)
+  credits       Int       @default(1)
+  creditsUsed   Int       @default(0)
+  creditsReset  DateTime  @default(dbgenerated("NOW() + INTERVAL '30 days'"))
+
+  // AI Video credits (separate pool)
+  aiVideoCredits     Int  @default(0)
+  aiVideoCreditsUsed Int  @default(0)
+
+  // Preferences
+  defaultNiche      String?
+  defaultVoiceId    String?
+  defaultStyle      String?
+  defaultFormat     String  @default("30s")
+  channelName       String?
+
+  // Notifications
+  notifyVideoReady      Boolean @default(true)
+  notifyVideoPosted     Boolean @default(true)
+  notifyMilestone       Boolean @default(true)
+  notifyWeeklyReport    Boolean @default(true)
+  notifyTrendAlert      Boolean @default(false)
+  notifyCreditLow       Boolean @default(true)
+
+  // Dodo Payments
+  dodoCustomerId    String?   @unique
+  dodoSubscriptionId String?  @unique
+  subscriptionEndsAt DateTime?  // Set on cancellation — plan reverts to starter after this date
+
+  // Relations
+  videos            Video[]
+  platformConnections PlatformConnection[]
+  autopilotConfig   AutopilotConfig?
+  topicQueue        TopicQueue[]
+  creditTransactions CreditTransaction[]
+  sessions          Session[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([email])
+  @@index([googleId])
+}
+
+// ── AUTH (NextAuth v5) ────────────────────────────────
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── VIDEO ─────────────────────────────────────────────
+model Video {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content
+  title       String
+  topic       String
+  niche       String?
+
+  // Config
+  status      VideoStatus @default(pending)
+  format      String      @default("30s")
+  imageStyle  String      @default("cinematic")
+  voiceId     String      @default("ryan")
+  voiceSpeed  Float       @default(1.0)
+  musicMood   String      @default("motivational")
+  musicVolume Float       @default(0.15)
+
+  // Generation mode
+  generationMode  GenerationMode  @default(image_stack)
+  aiVideoPrompt   String?
+  aiVideoUrl      String?
+  aiAudioMode     AiAudioMode?
+  aiRawAudioUrl   String?
+
+  // Subtitle config stored as JSON
+  subtitleConfig Json     @default("{}")
+
+  // Generated content
+  script      Json?       // ScriptSegment[]
+  imageUrls   String[]    @default([])
+  audioUrl    String?
+  musicUrl    String?
+  videoUrl    String?
+  thumbnailUrl String?
+
+  // Publishing
+  platforms         String[]  @default([])
+  scheduledAt       DateTime?
+  postedAt          DateTime?
+  publishedPlatforms String[] @default([])
+  platformStatuses   Json     @default("{}")   // { tiktok: 'posted'|'pending'|'failed'|'skipped', ... }
+
+  // Processing metadata
+  renderJobId   String?
+  errorMessage  String?
+  creditsUsed   Int       @default(1)
+  processingMs  Int?
+
+  // Analytics (synced from platforms)
+  analytics     VideoAnalytics?
+
+  // Autopilot link
+  topicQueueId  String?   @unique
+  topicQueue    TopicQueue? @relation(fields: [topicQueueId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+// ── VIDEO ANALYTICS ───────────────────────────────────
+model VideoAnalytics {
+  id          String  @id @default(cuid())
+  videoId     String  @unique
+  video       Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  totalViews      Int     @default(0)
+  totalLikes      Int     @default(0)
+  totalShares     Int     @default(0)
+  totalComments   Int     @default(0)
+  watchRate       Float   @default(0)
+
+  // Per-platform breakdown stored as JSON
+  platformBreakdown Json  @default("{}")
+
+  // Time series data for charts
+  dailyViews    Json    @default("[]")
+
+  lastSyncedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ── PLATFORM CONNECTION ───────────────────────────────
+model PlatformConnection {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform    String    // tiktok | instagram | youtube | x
+  handle      String?
+  displayName String?
+  avatarUrl   String?
+  followerCount Int     @default(0)
+
+  // Auth tokens (encrypted in production)
+  accessToken   String?
+  refreshToken  String?
+  tokenExpiry   DateTime?
+
+  // Settings
+  connected     Boolean   @default(false)
+  autoPost      Boolean   @default(true)
+  dailyLimit    Int       @default(3)
+  postWindow    String    @default("18:00-21:00")
+
+  // Health
+  lastPostAt        DateTime?
+  lastPostStatus    String?
+  shadowbanRisk     String    @default("low")
+  throttleActive    Boolean   @default(false)
+
+  // Stats this month
+  monthlyViews      Int       @default(0)
+  monthlyPosts      Int       @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
+// ── AUTOPILOT CONFIG ──────────────────────────────────
+model AutopilotConfig {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  enabled         Boolean   @default(false)
+  niche           String    @default("finance")
+  format          String    @default("30s")
+  postsPerDay     Int       @default(1)
+  imageStyle      String    @default("cinematic")
+  voiceId         String    @default("ryan")
+  musicMood       String    @default("motivational")
+  approvalMode    String    @default("review")
+
+  // Weekly schedule stored as JSON
+  // { monday: [{time, platform, enabled}], ... }
+  schedule        Json      @default("{}")
+
+  // Subtitle config
+  subtitleConfig  Json      @default("{}")
+
+  // AI optimal time toggle
+  aiOptimizeTime  Boolean   @default(false)
+
+  // Last run metadata
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  topicsGeneratedAt DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ── TOPIC QUEUE ───────────────────────────────────────
+model TopicQueue {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  topic       String
+  niche       String
+  order       Int       @default(0)
+  status      String    @default("pending")
+  // pending | generating | done | failed
+
+  scheduledFor  DateTime?
+  videoId       String?
+  video         Video?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([scheduledFor])
+}
+
+// ── CREDIT TRANSACTION ────────────────────────────────
+model CreditTransaction {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String
+  // purchase | usage | refund | bonus | reset
+
+  credits     Int
+  // positive = added, negative = used
+
+  description String
+  videoId     String?
+  dodoPaymentId String?
+
+  balanceAfter  Int
+
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+// ── RENDER JOB ────────────────────────────────────────
+model RenderJob {
+  id          String    @id @default(cuid())
+  videoId     String    @unique
+  status      String    @default("queued")
+  // queued | processing | complete | failed
+
+  stage       String?
+  // script | images | voice | render | upload
+
+  progress    Int       @default(0)
+  renderAttempts Int    @default(0)   // FIX #6: Track re-render attempts
+  errorMessage String?
+
+  // Timing
+  queuedAt    DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([videoId])
+  @@index([status])
+}
+
+// ── ENUMS ─────────────────────────────────────────────
+enum Plan {
+  free
+  starter
+  pro
+  creator_max
+}
+
+enum GenerationMode {
+  image_stack
+  ai_video
+}
+
+enum AiAudioMode {
+  keep_ai
+  replace
+}
+
+enum VideoStatus {
+  pending
+  generating_script
+  generating_images
+  generating_voice
+  rendering
+  ready
+  scheduled
+  posted
+  failed
+}
+
+// ── ADMIN: SHOWCASE VIDEOS ───────────────────────────
+model AdminShowcaseVideo {
+  id          String    @id @default(cuid())
+  title       String
+  niche       String
+  views       String    @default("0")
+  likes       String    @default("0")
+  videoUrl    String?
+  thumbnailUrl String?
+  gradient    String    @default("from-emerald-600/50 to-teal-800/50")
+  order       Int       @default(0)
+  active      Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([active, order])
+}
+
+// ── ADMIN: MUSIC TRACKS ──────────────────────────────
+model AdminMusicTrack {
+  id          String    @id @default(cuid())
+  name        String
+  mood        String    // upbeat | dark | motivational | calm | mystery
+  fileUrl     String
+  duration    Int?      // seconds
+  active      Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([mood, active])
+}
+
+// ── ADMIN: STYLE PREVIEWS ────────────────────────────
+model AdminStylePreview {
+  id          String    @id @default(cuid())
+  styleId     String    // cinematic | anime | dark_fantasy | etc.
+  imageUrl    String
+  order       Int       @default(0)
+  active      Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([styleId])
+  @@index([active])
+}
+
+// ── ADMIN: VOICE PREVIEWS ────────────────────────────
+model AdminVoicePreview {
+  id          String    @id @default(cuid())
+  voiceId     String    // Autumn | Noah | Elodie | etc.
+  audioUrl    String
+  active      Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([voiceId])
+  @@index([active])
+}
+

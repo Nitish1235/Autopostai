@@ -1,0 +1,53 @@
+# ── Stage 1: Install dependencies ─────────────────────
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# ── Stage 2: Build worker ─────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Compile TypeScript workers
+RUN npx tsc --project tsconfig.worker.json || true
+
+# ── Stage 3: Production image ─────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Install FFmpeg for video rendering and audio muxing
+RUN apk add --no-cache ffmpeg
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 worker
+
+# Copy node_modules (workers need full deps)
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy Prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma ./prisma
+
+# Copy worker source and compiled output
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+
+USER worker
+
+# Cloud Run uses 8080
+EXPOSE 8080
+ENV PORT=8080
+
+CMD ["node", "dist/lib/queue/workers/index.js"]

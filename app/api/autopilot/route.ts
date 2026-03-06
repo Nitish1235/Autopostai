@@ -1,0 +1,202 @@
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { auth } from '@/lib/auth/authOptions'
+import { prisma } from '@/lib/db/prisma'
+import { inngest } from '@/lib/inngest/client'
+
+// ── PUT Schema ───────────────────────────────────────
+
+const UpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  niche: z.string().optional(),
+  format: z.enum(['30s', '60s', '90s']).optional(),
+  postsPerDay: z.number().int().min(1).max(6).optional(),
+  imageStyle: z.string().optional(),
+  voiceId: z.string().optional(),
+  musicMood: z.string().optional(),
+  approvalMode: z.enum(['review', 'autopilot']).optional(),
+  schedule: z
+    .record(
+      z.array(
+        z.object({
+          time: z.string(),
+          platform: z.string(),
+          enabled: z.boolean(),
+        })
+      )
+    )
+    .optional(),
+  subtitleConfig: z.record(z.unknown()).optional(),
+  aiOptimizeTime: z.boolean().optional(),
+})
+
+// ── GET — Get Autopilot Config ───────────────────────
+
+export async function GET() {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    let config = await prisma.autopilotConfig.findUnique({
+      where: { userId: session.user.id },
+    })
+
+    // Create default if not exists
+    if (!config) {
+      config = await prisma.autopilotConfig.create({
+        data: {
+          userId: session.user.id,
+          schedule: JSON.stringify({
+            monday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
+            tuesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
+            wednesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
+            thursday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
+            friday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
+            saturday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
+            sunday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
+          }),
+        },
+      })
+    }
+
+    return NextResponse.json({ success: true, data: config })
+  } catch (error) {
+    console.error('[autopilot/GET] Error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ── PUT — Update Autopilot Config ────────────────────
+
+export async function PUT(request: Request) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const parsed = UpdateSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const data = parsed.data
+
+    // Autopilot available on all plans
+
+    // Build update payload
+    const updateData: Record<string, unknown> = {}
+    if (data.enabled !== undefined) updateData.enabled = data.enabled
+    if (data.niche !== undefined) updateData.niche = data.niche
+    if (data.format !== undefined) updateData.format = data.format
+    if (data.postsPerDay !== undefined) updateData.postsPerDay = data.postsPerDay
+    if (data.imageStyle !== undefined) updateData.imageStyle = data.imageStyle
+    if (data.voiceId !== undefined) updateData.voiceId = data.voiceId
+    if (data.musicMood !== undefined) updateData.musicMood = data.musicMood
+    if (data.approvalMode !== undefined) updateData.approvalMode = data.approvalMode
+    if (data.schedule !== undefined) updateData.schedule = data.schedule
+    if (data.subtitleConfig !== undefined) updateData.subtitleConfig = data.subtitleConfig
+    if (data.aiOptimizeTime !== undefined) updateData.aiOptimizeTime = data.aiOptimizeTime
+
+    const config = await prisma.autopilotConfig.upsert({
+      where: { userId: session.user.id },
+      create: {
+        userId: session.user.id,
+        ...updateData,
+      },
+      update: updateData,
+    })
+
+    // If enabling: check topic queue and trigger topic generation if needed
+    if (data.enabled === true) {
+      const pendingTopics = await prisma.topicQueue.count({
+        where: { userId: session.user.id, status: 'pending' },
+      })
+
+      if (pendingTopics < 3) {
+        const niche = data.niche ?? config.niche
+        try {
+          await inngest.send({
+            name: 'topics/generate',
+            data: {
+              userId: session.user.id,
+              niche,
+              count: 7,
+            },
+          })
+        } catch {
+          // Non-critical
+        }
+      }
+
+      // Set nextRunAt to next scheduled slot
+      await prisma.autopilotConfig.update({
+        where: { userId: session.user.id },
+        data: {
+          nextRunAt: getNextScheduledTime(config.schedule as Record<string, unknown[]>),
+        },
+      })
+    }
+
+    return NextResponse.json({ success: true, data: config })
+  } catch (error) {
+    console.error('[autopilot/PUT] Error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ── Helper: Get Next Scheduled Time ──────────────────
+
+function getNextScheduledTime(schedule: Record<string, unknown[]>): Date {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  const now = new Date()
+  const currentDay = now.getUTCDay()
+
+  // Check the next 7 days
+  for (let offset = 0; offset < 7; offset++) {
+    const dayIndex = (currentDay + offset) % 7
+    const dayName = days[dayIndex]
+    const slots = schedule[dayName] as Array<{ time: string; enabled: boolean }> | undefined
+
+    if (!slots) continue
+
+    // Sort slots by time to find earliest future slot
+    const sortedSlots = [...slots].filter(s => s.enabled).sort((a, b) => a.time.localeCompare(b.time))
+
+    for (const slot of sortedSlots) {
+      const [hours, minutes] = slot.time.split(':').map(Number)
+      const candidate = new Date(now)
+      candidate.setUTCDate(candidate.getUTCDate() + offset)
+      candidate.setUTCHours(hours, minutes, 0, 0)
+
+      if (candidate > now) {
+        return candidate
+      }
+    }
+  }
+
+  // Default: tomorrow at 18:00 UTC
+  const tomorrow = new Date(now)
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+  tomorrow.setUTCHours(18, 0, 0, 0)
+  return tomorrow
+}

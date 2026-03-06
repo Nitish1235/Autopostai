@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env.local
+    volumes:
+      - ../music:/app/music:ro
+    depends_on:
+      - worker
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    env_file:
+      - ../.env.local
+    volumes:
+      - ../music:/app/music:ro
+      - /tmp/renders:/tmp/renders
+    restart: unless-stopped

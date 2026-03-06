@@ -1,0 +1,423 @@
+'use client'
+
+import { useState, useCallback, useMemo } from 'react'
+import { Button } from '@/components/ui/button'
+import { Stepper } from '@/components/ui/stepper'
+import { StepMode } from '@/components/create/steps/StepMode'
+import { StepTopic } from '@/components/create/steps/StepTopic'
+import { StepScript } from '@/components/create/steps/StepScript'
+import { StepVoice } from '@/components/create/steps/StepVoice'
+import { StepStyle } from '@/components/create/steps/StepStyle'
+import { StepSubtitles } from '@/components/create/steps/StepSubtitles'
+import { StepAudio } from '@/components/create/steps/StepAudio'
+import { StepPreview } from '@/components/create/steps/StepPreview'
+import { useToast } from '@/components/ui/toast'
+import { useUser } from '@/hooks/useUser'
+import type {
+  ScriptSegment,
+  VideoFormat,
+  ImageStyle,
+  MusicMood,
+  SubtitleConfig,
+  Platform,
+  GenerationMode,
+  AiAudioMode,
+} from '@/types'
+
+const IMAGE_STACK_STEPS = [
+  { id: 'mode', label: 'Mode' },
+  { id: 'topic', label: 'Topic' },
+  { id: 'script', label: 'Script' },
+  { id: 'voice', label: 'Voice' },
+  { id: 'style', label: 'Style' },
+  { id: 'subtitles', label: 'Subtitles' },
+  { id: 'preview', label: 'Preview' },
+]
+
+const AI_VIDEO_STEPS = [
+  { id: 'mode', label: 'Mode' },
+  { id: 'topic', label: 'Topic' },
+  { id: 'audio', label: 'Audio' },
+  { id: 'preview', label: 'Preview' },
+]
+
+const DEFAULT_SUBTITLE_CONFIG: SubtitleConfig = {
+  font: 'impact',
+  fontSize: 42,
+  primaryColor: '#FFFFFF',
+  activeColor: '#FFE500',
+  spokenColor: '#AAAAAA',
+  firstWordAccent: false,
+  accentColor: '#FF2D55',
+  strokeColor: '#000000',
+  strokeWidth: 4,
+  backgroundBox: false,
+  bgColor: '#000000',
+  bgOpacity: 0.8,
+  bgRadius: 4,
+  shadow: true,
+  glow: false,
+  animation: 'pop',
+  animationDuration: 200,
+  position: 75,
+  alignment: 'center',
+  maxWordsPerLine: 2,
+  uppercase: true,
+}
+
+function CreateWizard() {
+  const { toast } = useToast()
+  const { user } = useUser()
+
+  const [currentStep, setCurrentStep] = useState(0)
+  const [generationMode, setGenerationMode] = useState<GenerationMode>('image_stack')
+  const [aiAudioMode, setAiAudioMode] = useState<AiAudioMode>('keep_ai')
+  const [topic, setTopic] = useState('')
+  const [niche, setNiche] = useState(user?.defaultNiche || 'finance')
+  const [format, setFormat] = useState<VideoFormat>(
+    (user?.defaultFormat as VideoFormat) || '60s'
+  )
+  const [script, setScript] = useState<ScriptSegment[]>([])
+  const [voiceId, setVoiceId] = useState(user?.defaultVoiceId || 'ryan')
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0)
+  const [imageStyle, setImageStyle] = useState<ImageStyle>(
+    (user?.defaultStyle as ImageStyle) || 'cinematic'
+  )
+  const [customSuffix, setCustomSuffix] = useState('')
+  const [musicMood, setMusicMood] = useState<MusicMood>('upbeat')
+  const [musicVolume, setMusicVolume] = useState(0.3)
+  const [subtitleConfig, setSubtitleConfig] =
+    useState<SubtitleConfig>(DEFAULT_SUBTITLE_CONFIG)
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
+    'tiktok',
+  ])
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [generationStage, setGenerationStage] = useState('')
+  const [publishing, setPublishing] = useState(false)
+
+  const isAiVideo = generationMode === 'ai_video'
+  const steps = isAiVideo ? AI_VIDEO_STEPS : IMAGE_STACK_STEPS
+  const previewStepIndex = steps.length - 1
+  const lastEditableStepIndex = previewStepIndex - 1
+
+  const connectedPlatforms =
+    user?.platformConnections
+      ?.filter((c) => c.connected)
+      .map((c) => c.platform) || []
+
+  const handleGenerateScript = useCallback(async () => {
+    if (topic.length < 10) {
+      toast({ message: 'Topic must be at least 10 characters', type: 'error' })
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch('/api/script/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, niche, format }),
+      })
+
+      const data = await res.json()
+      if (data.success && data.data?.segments) {
+        setScript(data.data.segments)
+        setCurrentStep(2) // Step 2 = script in image_stack mode
+        toast({ message: 'Script generated!', type: 'success' })
+      } else {
+        toast({
+          message: data.error || 'Failed to generate script',
+          type: 'error',
+        })
+      }
+    } catch {
+      toast({ message: 'Network error. Try again.', type: 'error' })
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [topic, niche, format, toast])
+
+  const handleCreateVideo = useCallback(async () => {
+    setIsGenerating(true)
+    setGenerationProgress(0)
+    setGenerationStage('Creating video...')
+    setCurrentStep(previewStepIndex)
+
+    try {
+      const res = await fetch('/api/video/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          niche,
+          format,
+          script: isAiVideo ? undefined : script,
+          voiceId,
+          voiceSpeed,
+          imageStyle,
+          customSuffix,
+          musicMood,
+          musicVolume,
+          subtitleConfig,
+          platforms: selectedPlatforms,
+          scheduledAt,
+          generationMode,
+          aiAudioMode: isAiVideo ? aiAudioMode : undefined,
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success && data.data?.videoId) {
+        setVideoId(data.data.videoId)
+        toast({ message: 'Video creation started!', type: 'success' })
+
+        // Simulate progress polling
+        let progress = 10
+        const labels = isAiVideo
+          ? ['Submitting to Sora 2...', 'Generating AI video...', 'Processing...', 'Finalizing...']
+          : ['Generating images...', 'Generating voice...', 'Rendering video...', 'Finalizing...']
+        const interval = setInterval(() => {
+          progress += Math.random() * (isAiVideo ? 8 : 15)
+          if (progress >= 100) {
+            progress = 100
+            clearInterval(interval)
+            setIsGenerating(false)
+            setGenerationStage('Complete!')
+          }
+          setGenerationProgress(Math.min(progress, 100))
+
+          if (progress < 25) setGenerationStage(labels[0])
+          else if (progress < 50) setGenerationStage(labels[1])
+          else if (progress < 75) setGenerationStage(labels[2])
+          else if (progress < 100) setGenerationStage(labels[3])
+        }, 2000)
+      } else {
+        toast({
+          message: data.error || 'Failed to create video',
+          type: 'error',
+        })
+        setIsGenerating(false)
+      }
+    } catch {
+      toast({ message: 'Network error', type: 'error' })
+      setIsGenerating(false)
+    }
+  }, [
+    topic,
+    niche,
+    format,
+    script,
+    voiceId,
+    voiceSpeed,
+    imageStyle,
+    customSuffix,
+    musicMood,
+    musicVolume,
+    subtitleConfig,
+    selectedPlatforms,
+    scheduledAt,
+    generationMode,
+    aiAudioMode,
+    isAiVideo,
+    previewStepIndex,
+    toast,
+  ])
+
+  const handlePublish = useCallback(async () => {
+    if (!videoId) return
+    setPublishing(true)
+    try {
+      const res = await fetch(`/api/publish/${videoId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platforms: selectedPlatforms,
+          scheduledAt,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ message: 'Video published successfully!', type: 'success' })
+      } else {
+        toast({ message: data.error || 'Failed to publish', type: 'error' })
+      }
+    } catch {
+      toast({ message: 'Network error', type: 'error' })
+    } finally {
+      setPublishing(false)
+    }
+  }, [videoId, selectedPlatforms, scheduledAt, toast])
+
+  const canGoNext = (): boolean => {
+    const stepId = steps[currentStep]?.id
+    switch (stepId) {
+      case 'mode':
+        return !!generationMode
+      case 'topic':
+        return topic.length >= 10
+      case 'script':
+        return script.length > 0
+      case 'voice':
+        return !!voiceId
+      case 'style':
+        return !!imageStyle
+      case 'subtitles':
+        return true
+      case 'audio':
+        return !!aiAudioMode
+      default:
+        return false
+    }
+  }
+
+  const handleNext = () => {
+    const stepId = steps[currentStep]?.id
+
+    // Image Stack: topic step triggers script generation
+    if (stepId === 'topic' && !isAiVideo) {
+      handleGenerateScript()
+      return
+    }
+
+    // Last editable step triggers video creation
+    if (currentStep === lastEditableStepIndex) {
+      handleCreateVideo()
+      return
+    }
+
+    if (currentStep < previewStepIndex) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep > 0) setCurrentStep(currentStep - 1)
+  }
+
+  const getCTALabel = (): string => {
+    const stepId = steps[currentStep]?.id
+    if (stepId === 'mode') return 'Continue →'
+    if (stepId === 'topic' && !isAiVideo) return 'Generate Script →'
+    if (currentStep === lastEditableStepIndex) return isAiVideo ? 'Generate AI Video →' : 'Generate Video →'
+    return 'Continue →'
+  }
+
+  return (
+    <div className="max-w-[1100px] mx-auto px-8 py-7">
+      {/* Stepper */}
+      <div className="mb-8">
+        <Stepper steps={steps} currentStep={currentStep} />
+      </div>
+
+      {/* Step content */}
+      <div className="min-h-[500px]">
+        {steps[currentStep]?.id === 'mode' && (
+          <StepMode
+            generationMode={generationMode}
+            onChange={setGenerationMode}
+          />
+        )}
+        {steps[currentStep]?.id === 'topic' && (
+          <StepTopic
+            topic={topic}
+            onTopicChange={setTopic}
+            format={format}
+            onFormatChange={setFormat}
+            niche={niche}
+            onNicheChange={setNiche}
+          />
+        )}
+        {steps[currentStep]?.id === 'script' && (
+          <StepScript
+            script={script}
+            onScriptChange={setScript}
+            imageStyle={imageStyle}
+            voiceId={voiceId}
+          />
+        )}
+        {steps[currentStep]?.id === 'voice' && (
+          <StepVoice
+            voiceId={voiceId}
+            onVoiceChange={setVoiceId}
+            voiceSpeed={voiceSpeed}
+            onSpeedChange={setVoiceSpeed}
+          />
+        )}
+        {steps[currentStep]?.id === 'style' && (
+          <StepStyle
+            imageStyle={imageStyle}
+            onStyleChange={setImageStyle}
+            customSuffix={customSuffix}
+            onCustomSuffixChange={setCustomSuffix}
+          />
+        )}
+        {steps[currentStep]?.id === 'subtitles' && (
+          <StepSubtitles
+            config={subtitleConfig}
+            onConfigChange={setSubtitleConfig}
+            imageStyle={imageStyle}
+          />
+        )}
+        {steps[currentStep]?.id === 'audio' && (
+          <StepAudio
+            aiAudioMode={aiAudioMode}
+            onChange={setAiAudioMode}
+            voiceId={voiceId}
+            onVoiceChange={setVoiceId}
+            musicMood={musicMood}
+            onMusicMoodChange={setMusicMood}
+            musicVolume={musicVolume}
+            onMusicVolumeChange={setMusicVolume}
+          />
+        )}
+        {steps[currentStep]?.id === 'preview' && (
+          <StepPreview
+            videoId={videoId}
+            videoUrl={videoUrl}
+            thumbnailUrl={thumbnailUrl}
+            isGenerating={isGenerating}
+            generationProgress={generationProgress}
+            generationStage={generationStage}
+            selectedPlatforms={selectedPlatforms}
+            onPlatformsChange={setSelectedPlatforms}
+            scheduledAt={scheduledAt}
+            onScheduledAtChange={setScheduledAt}
+            connectedPlatforms={connectedPlatforms}
+            onPublish={handlePublish}
+            publishing={publishing}
+          />
+        )}
+      </div>
+
+      {/* Navigation bar */}
+      {currentStep < previewStepIndex && (
+        <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--border)]">
+          <Button
+            variant="secondary"
+            onClick={handleBack}
+            disabled={currentStep === 0}
+          >
+            ← Back
+          </Button>
+          <span className="text-[12px] text-[var(--text-dim)]">
+            Step {currentStep + 1} of {steps.length}
+          </span>
+          <Button
+            onClick={handleNext}
+            disabled={!canGoNext()}
+            loading={isGenerating}
+          >
+            {getCTALabel()}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export { CreateWizard }
