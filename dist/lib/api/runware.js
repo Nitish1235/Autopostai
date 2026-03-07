@@ -1,0 +1,248 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateImage = generateImage;
+exports.generateImageBatch = generateImageBatch;
+exports.upscaleImage = upscaleImage;
+exports.getModelForStyle = getModelForStyle;
+const ws_1 = __importDefault(require("ws"));
+const crypto_1 = require("crypto");
+// ── Config ───────────────────────────────────────────
+const RUNWARE_WS_URL = 'wss://ws.runware.ai/v1';
+const API_KEY = process.env.RUNWARE_API_KEY;
+// ── Generate Single Image ────────────────────────────
+async function generateImage(params) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Image generation timed out after 30s'));
+        }, 30000);
+        const ws = new ws_1.default(RUNWARE_WS_URL);
+        let authenticated = false;
+        const taskUUID = (0, crypto_1.randomUUID)();
+        ws.on('open', () => {
+            // Send authentication
+            ws.send(JSON.stringify([
+                {
+                    taskType: 'authentication',
+                    apiKey: API_KEY,
+                },
+            ]));
+        });
+        ws.on('message', (data) => {
+            try {
+                const messages = JSON.parse(data.toString());
+                for (const msg of messages) {
+                    // Handle authentication response
+                    if (msg.taskType === 'authentication') {
+                        if (msg.status === 'error') {
+                            clearTimeout(timeout);
+                            ws.close();
+                            reject(new Error('Runware authentication failed'));
+                            return;
+                        }
+                        authenticated = true;
+                        // Send image generation task
+                        const request = {
+                            taskType: 'imageInference',
+                            taskUUID,
+                            positivePrompt: params.positivePrompt,
+                            negativePrompt: params.negativePrompt,
+                            model: params.model ?? 'runware:100@1',
+                            width: params.width ?? 1024,
+                            height: params.height ?? 1792,
+                            numberResults: 1,
+                            outputFormat: 'WEBP',
+                            outputType: ['URL'],
+                            seed: params.seed,
+                            steps: 4,
+                            CFGScale: 1,
+                        };
+                        ws.send(JSON.stringify([request]));
+                        return;
+                    }
+                    // Handle image result
+                    if (msg.taskType === 'imageInference' && msg.taskUUID === taskUUID) {
+                        const result = msg;
+                        if (!result.imageURL) {
+                            clearTimeout(timeout);
+                            ws.close();
+                            reject(new Error('No image returned from Runware'));
+                            return;
+                        }
+                        clearTimeout(timeout);
+                        ws.close();
+                        resolve({
+                            imageUrl: result.imageURL,
+                            base64: result.imageBase64Data,
+                        });
+                        return;
+                    }
+                    // Handle errors
+                    if (msg.taskType === 'error') {
+                        clearTimeout(timeout);
+                        ws.close();
+                        reject(new Error(`Runware error: ${msg.errorMessage ?? 'Unknown error'}`));
+                        return;
+                    }
+                }
+            }
+            catch (parseError) {
+                clearTimeout(timeout);
+                ws.close();
+                const message = parseError instanceof Error ? parseError.message : 'Parse error';
+                reject(new Error(`Runware response parse error: ${message}`));
+            }
+        });
+        ws.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`Runware WebSocket error: ${error.message}`));
+        });
+        ws.on('close', () => {
+            clearTimeout(timeout);
+            if (!authenticated) {
+                reject(new Error('Runware WebSocket closed before authentication'));
+            }
+        });
+    });
+}
+// ── Generate Image Batch ─────────────────────────────
+async function generateImageBatch(params) {
+    const { prompts, width, height, model, concurrency = 3 } = params;
+    const results = [];
+    // Process in batches
+    for (let i = 0; i < prompts.length; i += concurrency) {
+        const batch = prompts.slice(i, i + concurrency);
+        const batchResults = await Promise.allSettled(batch.map(async (prompt, batchIndex) => {
+            const globalIndex = i + batchIndex;
+            try {
+                const result = await generateImage({
+                    positivePrompt: prompt.positivePrompt,
+                    negativePrompt: prompt.negativePrompt,
+                    width,
+                    height,
+                    seed: prompt.seed,
+                    model,
+                });
+                return { index: globalIndex, imageUrl: result.imageUrl };
+            }
+            catch {
+                // Retry once on failure
+                try {
+                    const retryResult = await generateImage({
+                        positivePrompt: prompt.positivePrompt,
+                        negativePrompt: prompt.negativePrompt,
+                        width,
+                        height,
+                        seed: prompt.seed,
+                        model,
+                    });
+                    return { index: globalIndex, imageUrl: retryResult.imageUrl };
+                }
+                catch (retryError) {
+                    console.error(`Image generation failed for index ${globalIndex} after retry:`, retryError);
+                    return null;
+                }
+            }
+        }));
+        for (const result of batchResults) {
+            if (result.status === 'fulfilled' && result.value !== null) {
+                results.push(result.value);
+            }
+        }
+    }
+    return results.sort((a, b) => a.index - b.index);
+}
+// ── Upscale Image ────────────────────────────────────
+async function upscaleImage(imageUrl) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Image upscale timed out after 60s'));
+        }, 60000);
+        const ws = new ws_1.default(RUNWARE_WS_URL);
+        const taskUUID = (0, crypto_1.randomUUID)();
+        ws.on('open', () => {
+            ws.send(JSON.stringify([
+                {
+                    taskType: 'authentication',
+                    apiKey: API_KEY,
+                },
+            ]));
+        });
+        ws.on('message', (data) => {
+            try {
+                const messages = JSON.parse(data.toString());
+                for (const msg of messages) {
+                    if (msg.taskType === 'authentication') {
+                        if (msg.status === 'error') {
+                            clearTimeout(timeout);
+                            ws.close();
+                            reject(new Error('Runware authentication failed'));
+                            return;
+                        }
+                        // Send upscale task
+                        ws.send(JSON.stringify([
+                            {
+                                taskType: 'imageUpscale',
+                                taskUUID,
+                                inputImage: imageUrl,
+                                upscaleFactor: 2,
+                            },
+                        ]));
+                        return;
+                    }
+                    if (msg.taskType === 'imageUpscale' && msg.taskUUID === taskUUID) {
+                        clearTimeout(timeout);
+                        ws.close();
+                        resolve(msg.imageURL ?? imageUrl);
+                        return;
+                    }
+                    if (msg.taskType === 'error') {
+                        clearTimeout(timeout);
+                        ws.close();
+                        reject(new Error(`Runware upscale error: ${msg.errorMessage ?? 'Unknown'}`));
+                        return;
+                    }
+                }
+            }
+            catch {
+                clearTimeout(timeout);
+                ws.close();
+                reject(new Error('Runware upscale response parse error'));
+            }
+        });
+        ws.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`Runware upscale WebSocket error: ${error.message}`));
+        });
+        ws.on('close', () => {
+            clearTimeout(timeout);
+        });
+    });
+}
+// ── Model Selector ───────────────────────────────────
+function getModelForStyle(imageStyle) {
+    switch (imageStyle) {
+        case 'cinematic':
+            return 'runware:100@1';
+        case 'anime':
+            return 'civitai:36520@76907';
+        case 'dark_fantasy':
+            return 'runware:100@1';
+        case 'cyberpunk':
+            return 'runware:100@1';
+        case 'documentary':
+            return 'runware:100@1';
+        case 'vintage':
+            return 'runware:100@1';
+        case '3d_render':
+            return 'runware:100@1';
+        case 'minimal':
+            return 'runware:100@1';
+        default:
+            return 'runware:100@1';
+    }
+}

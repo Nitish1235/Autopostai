@@ -1,12 +1,12 @@
 # ── Stage 1: Install dependencies ─────────────────────
-FROM node:20-alpine AS deps
+FROM --platform=linux/amd64 node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat python3 make g++ openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # ── Stage 2: Build the application ────────────────────
-FROM node:20-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN npm run build
 RUN npx tsc --project tsconfig.worker.json || true
 
 # ── Stage 3: Production image ─────────────────────────
-FROM node:20-alpine AS runner
+FROM --platform=linux/amd64 node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
