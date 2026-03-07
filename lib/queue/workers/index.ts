@@ -30,8 +30,8 @@ const server = http.createServer((req, res) => {
   res.end('AutoPost AI Worker is running!')
 })
 
-server.listen(PORT, () => {
-  console.log(`[worker] Health check server listening on port ${PORT}`)
+server.listen(PORT as number, '0.0.0.0', () => {
+  console.log(`[worker] Health check server listening on port ${PORT} at 0.0.0.0`)
 })
 
 // ── Graceful Shutdown ────────────────────────────────

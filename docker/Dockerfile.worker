@@ -47,6 +47,7 @@ COPY --from=builder /app/package.json ./
 USER worker
 
 # Cloud Run uses 8080
+ENV HOSTNAME="0.0.0.0"
 EXPOSE 8080
 ENV PORT=8080
 
