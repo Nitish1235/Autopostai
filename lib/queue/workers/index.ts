@@ -2,6 +2,7 @@
 // This file starts all BullMQ workers when the
 // worker container boots via Dockerfile.worker.
 
+import 'module-alias/register'
 import http from 'http'
 
 import { scriptWorker } from './scriptWorker'

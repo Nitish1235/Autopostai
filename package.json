@@ -11,6 +11,9 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio"
   },
+  "_moduleAliases": {
+    "@": "dist"
+  },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/sortable": "^8.0.0",
@@ -27,6 +30,7 @@
     "framer-motion": "^11.11.0",
     "inngest": "^3.22.0",
     "lucide-react": "^0.454.0",
+    "module-alias": "^2.3.4",
     "next": "^15.5.12",
     "next-auth": "^5.0.0-beta.22",
     "next-themes": "^0.4.3",
@@ -45,6 +49,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.0",
     "@types/fluent-ffmpeg": "^2.1.0",
+    "@types/module-alias": "^2.0.4",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
