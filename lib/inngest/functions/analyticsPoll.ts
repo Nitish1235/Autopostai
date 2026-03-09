@@ -2,7 +2,7 @@
 
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
-import { getPostAnalytics } from '@/lib/api/outstand'
+import { getPostAnalytics } from '@/lib/api/postforme'
 import { getVideoAnalytics as getYouTubeVideoAnalytics } from '@/lib/api/youtube'
 import { getChannelInfo } from '@/lib/api/youtube'
 
@@ -103,19 +103,19 @@ export const analyticsPoll = inngest.createFunction(
                   watchRate: 0,
                 }
               } else {
-                // TikTok, Instagram, X via Outstand
-                const postAnalytics = await getPostAnalytics({
+                // TikTok, Instagram, X via PostForMe
+                const postForMeAnalytics = await getPostAnalytics({
                   platform,
                   postId: video.id,
                   accessToken: connection.accessToken,
                 })
 
                 platformBreakdown[platform] = {
-                  views: postAnalytics.views,
-                  likes: postAnalytics.likes,
-                  shares: postAnalytics.shares,
-                  comments: postAnalytics.comments,
-                  watchRate: postAnalytics.watchRate,
+                  views: postForMeAnalytics.views,
+                  likes: postForMeAnalytics.likes,
+                  shares: postForMeAnalytics.shares,
+                  comments: postForMeAnalytics.comments,
+                  watchRate: postForMeAnalytics.watchRate,
                 }
               }
             } catch (platError) {
@@ -233,7 +233,7 @@ export const analyticsPoll = inngest.createFunction(
               newCount = channelInfo.subscriberCount
             }
             // TikTok, Instagram, X follower counts could be fetched
-            // via Outstand API if supported — skip for now
+            // via PostForMe API if supported — skip for now
             else {
               continue
             }

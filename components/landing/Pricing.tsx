@@ -12,6 +12,7 @@ interface PricingPlan {
   id: string
   name: string
   price: number
+  originalPrice: number
   credits: number
   postsPerDay: number
   highlight?: boolean
@@ -25,6 +26,7 @@ const PLANS: PricingPlan[] = [
     id: 'starter',
     name: 'Starter',
     price: 19,
+    originalPrice: 49,
     credits: 30,
     postsPerDay: 1,
     description: 'Perfect for getting started with faceless video content.',
@@ -47,6 +49,7 @@ const PLANS: PricingPlan[] = [
     id: 'pro',
     name: 'Pro',
     price: 49,
+    originalPrice: 129,
     credits: 100,
     postsPerDay: 2,
     highlight: true,
@@ -68,6 +71,7 @@ const PLANS: PricingPlan[] = [
     id: 'creator_max',
     name: 'Creator Max',
     price: 129,
+    originalPrice: 339,
     credits: 300,
     postsPerDay: 4,
     badge: 'Best Value',
@@ -208,6 +212,10 @@ function Pricing() {
               ? Math.round(plan.price * 0.8)
               : plan.price
 
+            const displayOriginalPrice = annual
+              ? Math.round(plan.originalPrice * 0.8)
+              : plan.originalPrice
+
             return (
               <motion.div
                 key={plan.id}
@@ -242,13 +250,18 @@ function Pricing() {
                   {plan.description}
                 </p>
 
-                <div className="flex items-baseline gap-1 mt-4 mb-1">
-                  <span className="text-[40px] font-bold text-[var(--text-primary)] tabular-nums">
-                    ${displayPrice}
+                <div className="flex items-baseline gap-2 mt-4 mb-1">
+                  <span className="text-[20px] font-medium text-[var(--text-dim)] line-through decoration-[var(--text-dim)]/50 decoration-2">
+                    ${displayOriginalPrice}
                   </span>
-                  <span className="text-[14px] text-[var(--text-dim)]">
-                    /mo
-                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[40px] font-bold text-[var(--text-primary)] tabular-nums">
+                      ${displayPrice}
+                    </span>
+                    <span className="text-[14px] text-[var(--text-dim)]">
+                      /mo
+                    </span>
+                  </div>
                 </div>
 
                 {/* Key metrics */}

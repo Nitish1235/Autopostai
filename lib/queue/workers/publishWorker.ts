@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq'
 import Redis from 'ioredis'
-import { postToMultiplePlatforms } from '@/lib/api/outstand'
+import { postToMultiplePlatforms } from '@/lib/api/postforme'
 import { uploadToYouTube } from '@/lib/api/youtube'
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
@@ -133,7 +133,7 @@ export const publishWorker = new Worker<PublishJob>(
       const successfulPlatforms: string[] = []
       const failedPlatforms: string[] = []
 
-      // 9. Publish to TikTok, Instagram, X via Outstand
+      // 9. Publish to TikTok, Instagram, X via PostForMe
       if (otherPlatforms.length > 0) {
         const connectedPlatforms = otherPlatforms
           .map((platform) => {
@@ -143,12 +143,12 @@ export const publishWorker = new Worker<PublishJob>(
               return null
             }
             return {
-              platform: platform as 'tiktok' | 'instagram' | 'x',
+              platform: platform as string,
               accessToken: conn.accessToken,
             }
           })
           .filter(
-            (p): p is { platform: 'tiktok' | 'instagram' | 'x'; accessToken: string } =>
+            (p): p is { platform: string; accessToken: string } =>
               p !== null
           )
 
@@ -158,7 +158,7 @@ export const publishWorker = new Worker<PublishJob>(
             captionMap[defaultPlatform] ?? captionMap[otherPlatforms[0]]
 
           try {
-            const outstandResults = await postToMultiplePlatforms({
+            const postForMeResults = await postToMultiplePlatforms({
               platforms: connectedPlatforms,
               videoUrl: video.videoUrl,
               caption: defaultCaption?.caption ?? video.title,
@@ -166,7 +166,7 @@ export const publishWorker = new Worker<PublishJob>(
               thumbnailUrl: video.thumbnailUrl ?? undefined,
             })
 
-            for (const result of outstandResults) {
+            for (const result of postForMeResults) {
               successfulPlatforms.push(result.platform)
             }
 
@@ -177,7 +177,7 @@ export const publishWorker = new Worker<PublishJob>(
               }
             }
           } catch {
-            // All outstand platforms failed
+            // All postforme platforms failed
             for (const cp of connectedPlatforms) {
               failedPlatforms.push(cp.platform)
             }
