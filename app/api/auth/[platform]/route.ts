@@ -7,7 +7,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 export async function GET(
     request: Request,
-    { params }: { params: { platform: string } }
+    { params }: { params: Promise<{ platform: string }> }
 ) {
     try {
         const session = await auth()
@@ -21,7 +21,7 @@ export async function GET(
             return NextResponse.redirect(`${APP_URL}/platforms?error=missing_api_key`)
         }
 
-        const platform = params.platform
+        const { platform } = await params
 
         if (platform === 'youtube') {
             // Keep existing direct YouTube OAuth
@@ -43,7 +43,7 @@ export async function GET(
 
         return NextResponse.redirect(redirectUrl.toString())
     } catch (error) {
-        console.error(`[auth/${params.platform}] Error:`, error)
+        console.error(`[auth] Error initializing OAuth flow:`, error)
         return NextResponse.redirect(`${APP_URL}/platforms?error=auth_init_failed`)
     }
 }
