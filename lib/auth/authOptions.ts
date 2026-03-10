@@ -190,6 +190,8 @@ const config: NextAuthConfig = {
     error: '/login',
   },
 
+  debug: true,
+
   callbacks: {
     async signIn() {
       return true
