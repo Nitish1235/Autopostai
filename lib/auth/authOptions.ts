@@ -226,7 +226,7 @@ const config: NextAuthConfig = {
 
     async authorized({ auth: session, request }) {
       const { pathname } = request.nextUrl
-      const publicRoutes = ['/', '/login', '/api/auth', '/api/webhooks']
+      const publicRoutes = ['/', '/login', '/api/auth', '/api/webhooks', '/policy', '/terms-service']
       const isPublic = publicRoutes.some((r) => pathname.startsWith(r))
       if (isPublic) return true
       return !!session

@@ -78,6 +78,8 @@ export default auth(async function middleware(request: NextRequest) {
     '/logo',
     '/images',
     '/videos',
+    '/policy',
+    '/terms-service',
   ]
 
   const isPublic = publicPaths.some(
