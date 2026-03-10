@@ -165,6 +165,7 @@ function PrismaAdapter(): Adapter {
 
 // ── NextAuth Configuration ────────────────────────────
 const config: NextAuthConfig = {
+  trustHost: true,
   adapter: PrismaAdapter(),
 
   providers: [
