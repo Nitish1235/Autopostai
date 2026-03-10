@@ -214,14 +214,14 @@ export default function LoginPage() {
           >
             By signing in, you agree to our{' '}
             <Link
-              href="/terms"
+              href="/terms-service"
               className="underline hover:text-[rgba(245,245,247,0.5)] transition-colors"
             >
               Terms
             </Link>{' '}
             and{' '}
             <Link
-              href="/privacy"
+              href="/policy"
               className="underline hover:text-[rgba(245,245,247,0.5)] transition-colors"
             >
               Privacy Policy
