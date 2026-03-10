@@ -14,6 +14,7 @@ interface PricingPlan {
   price: number
   originalPrice: number
   credits: number
+  soraCredits: number
   postsPerDay: number
   highlight?: boolean
   badge?: string
@@ -28,6 +29,7 @@ const PLANS: PricingPlan[] = [
     price: 19,
     originalPrice: 49,
     credits: 30,
+    soraCredits: 20,
     postsPerDay: 1,
     description: 'Perfect for getting started with faceless video content.',
     features: [
@@ -51,6 +53,7 @@ const PLANS: PricingPlan[] = [
     price: 49,
     originalPrice: 129,
     credits: 100,
+    soraCredits: 50,
     postsPerDay: 2,
     highlight: true,
     badge: 'Most Popular',
@@ -73,6 +76,7 @@ const PLANS: PricingPlan[] = [
     price: 129,
     originalPrice: 339,
     credits: 300,
+    soraCredits: 150,
     postsPerDay: 4,
     badge: 'Best Value',
     description: 'Maximum output for full-time content creators.',
@@ -265,7 +269,11 @@ function Pricing() {
                 </div>
 
                 {/* Key metrics */}
-                <div className="flex items-center gap-3 mb-5">
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] bg-[var(--accent-subtle)] border border-[var(--accent)]/20 px-2 py-0.5 rounded">
+                    <Sparkles size={10} className="text-[var(--accent)]" />
+                    {plan.soraCredits} Sora 2 Gens
+                  </span>
                   <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] bg-[var(--surface-hover)] px-2 py-0.5 rounded">
                     <Film size={10} />
                     {plan.credits} videos
