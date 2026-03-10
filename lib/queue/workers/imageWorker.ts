@@ -8,8 +8,12 @@ import type { ImageJob } from '@/lib/queue/videoQueue'
 import axios from 'axios'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? '', {
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
   maxRetriesPerRequest: null,
+  retryStrategy(times) {
+    if (!process.env.REDIS_URL) return null;
+    return Math.min(times * 50, 2000);
+  },
   enableReadyCheck: false,
 })
 
