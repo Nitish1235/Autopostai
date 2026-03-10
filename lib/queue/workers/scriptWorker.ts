@@ -13,9 +13,10 @@ import { getModelForStyle } from '@/lib/api/runware'
 import type { ScriptJob, ImageJob, VoiceJob } from '@/lib/queue/videoQueue'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? '', {
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
   maxRetriesPerRequest: null,
-  enableReadyCheck: false,
+  retryStrategy(times) { if (!process.env.REDIS_URL) return null; return Math.min(times * 50, 2000); },
+  enableReadyCheck: false
 })
 
 // ── Script Generation Worker ─────────────────────────
