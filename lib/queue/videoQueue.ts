@@ -7,10 +7,13 @@ const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
   maxRetriesPerRequest: null,
   retryStrategy(times) {
     if (!process.env.REDIS_URL) return null;
-    return Math.min(times * 50, 2000);
+    return Math.min(times * 100, 3000); // Backoff more aggressively
   },
   enableReadyCheck: false,
   family: 0,
+  connectTimeout: 20000,
+  commandTimeout: 15000,
+  keepAlive: 10000,
   tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
 })
 
