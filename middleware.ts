@@ -84,6 +84,8 @@ export default auth(async function middleware(request: NextRequest) {
     '/videos',
     '/policy',
     '/terms-service',
+    '/sitemap.xml',
+    '/robots.txt',
   ]
 
   const isPublic = publicPaths.some(
