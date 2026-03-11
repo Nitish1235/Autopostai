@@ -60,10 +60,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
 
-# Copy the universal startup script
-COPY --chown=nextjs:nodejs start.sh ./start.sh
-RUN chmod +x ./start.sh
-
+# (Web App container should exclusively run Next.js)
 USER nextjs
 
 # Cloud Run uses port 8080 by default
@@ -71,5 +68,5 @@ EXPOSE 8080
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
-# Start both web and worker processes
-CMD ["sh", "./start.sh"]
+# Start ONLY the Next.js web app (workers run in a separate container)
+CMD ["node", "server.js"]
