@@ -16,6 +16,12 @@ console.log('━━━━━━━━━━━━━━━━━━━━━━�
 console.log('  AutoPost AI workers started')
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
+// DEBUG LOGS FOR ENV VARS IN CLOUDRUN
+console.log('[DEBUG] Available ENV VAR keys in container:', Object.keys(process.env).sort().join(', '))
+console.log('[DEBUG] Checking specifically for REDIS_URL:', !!process.env.REDIS_URL, process.env.REDIS_URL ? 'PRESENT' : 'MISSING')
+console.log('[DEBUG] Checking specifically for UPSTASH:', Object.keys(process.env).filter(k => k.includes('UPSTASH')).join(', '))
+
+
 console.log(`[worker] Script worker initialized (concurrency: 1)`)
 console.log(`[worker] Image worker initialized (concurrency: 3)`)
 console.log(`[worker] Voice worker initialized (concurrency: 2)`)
