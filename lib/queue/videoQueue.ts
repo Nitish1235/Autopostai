@@ -38,7 +38,12 @@ const upstash = new UpstashRedis({
 
 // ── Queues ────────────────────────────────────────────
 
-export const scriptQueue = new Queue('script-generation', {
+// We must NEVER instantiate a real BullMQ Queue in the Web container,
+// otherwise BullMQ automatically attempts to execute Redis scripts on startup
+// and crashes Cloud Run instances via ETIMEDOUT / EPIPE networking blocks.
+// Instead, we export dummy Queue objects for the Web that just drop jobs into Upstash REST.
+
+export const scriptQueue = isWorker ? new Queue('script-generation', {
   connection,
   defaultJobOptions: {
     attempts: 3,
@@ -46,9 +51,9 @@ export const scriptQueue = new Queue('script-generation', {
     removeOnComplete: 100,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
-export const imageQueue = new Queue('image-generation', {
+export const imageQueue = isWorker ? new Queue('image-generation', {
   connection,
   defaultJobOptions: {
     attempts: 3,
@@ -56,9 +61,9 @@ export const imageQueue = new Queue('image-generation', {
     removeOnComplete: 100,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
-export const voiceQueue = new Queue('voice-generation', {
+export const voiceQueue = isWorker ? new Queue('voice-generation', {
   connection,
   defaultJobOptions: {
     attempts: 3,
@@ -66,9 +71,9 @@ export const voiceQueue = new Queue('voice-generation', {
     removeOnComplete: 100,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
-export const renderQueue = new Queue('video-render', {
+export const renderQueue = isWorker ? new Queue('video-render', {
   connection,
   defaultJobOptions: {
     attempts: 2,
@@ -76,9 +81,9 @@ export const renderQueue = new Queue('video-render', {
     removeOnComplete: 50,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
-export const publishQueue = new Queue('publish', {
+export const publishQueue = isWorker ? new Queue('publish', {
   connection,
   defaultJobOptions: {
     attempts: 3,
@@ -86,9 +91,9 @@ export const publishQueue = new Queue('publish', {
     removeOnComplete: 100,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
-export const aiVideoQueue = new Queue('ai-video-generation', {
+export const aiVideoQueue = isWorker ? new Queue('ai-video-generation', {
   connection,
   defaultJobOptions: {
     attempts: 2,
@@ -96,7 +101,7 @@ export const aiVideoQueue = new Queue('ai-video-generation', {
     removeOnComplete: 50,
     removeOnFail: 50,
   },
-})
+}) : { add: () => {} } as unknown as Queue
 
 // ── Job Type Interfaces ───────────────────────────────
 
