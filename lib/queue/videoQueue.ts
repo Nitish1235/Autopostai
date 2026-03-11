@@ -2,19 +2,38 @@ import { Queue } from 'bullmq'
 import Redis from 'ioredis'
 import { prisma } from '@/lib/db/prisma'
 
-// ── Redis Connection ──────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (!process.env.REDIS_URL) return null;
-    return Math.min(times * 100, 3000); // Backoff more aggressively
-  },
-  enableReadyCheck: false,
-  family: 0,
-  connectTimeout: 20000,
-  commandTimeout: 15000,
-  keepAlive: 10000,
-  tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
+import { Redis as UpstashRedis } from '@upstash/redis'
+
+// ── Environment Detection ─────────────────────────────
+// The Web App and the Background Worker use different mechanisms 
+// for connecting to Upstash to bypass Serverless VPC port blocks.
+
+const isWorker = process.env.IS_WORKER === 'true'
+
+// ── Redis Connection (Worker Only) ────────────────────
+// Only Workers establish the heavy TCP socket connection on port 6379. 
+// Web containers will use Upstash HTTP API to enqueue jobs via HTTPS.
+const connection = isWorker 
+  ? new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
+      maxRetriesPerRequest: null,
+      retryStrategy(times) {
+        if (!process.env.REDIS_URL) return null;
+        return Math.min(times * 100, 3000); 
+      },
+      enableReadyCheck: false,
+      family: 0,
+      connectTimeout: 20000,
+      commandTimeout: 15000,
+      keepAlive: 10000,
+      lazyConnect: false,
+      tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
+    })
+  : new Redis('redis://dummy:6379', { lazyConnect: true }) // Dummy connection for Web so BullMQ objects construct safely
+
+// ── Upstash HTTP Client (Web Only) ────────────────────
+const upstash = new UpstashRedis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 })
 
 // ── Queues ────────────────────────────────────────────
@@ -148,7 +167,36 @@ export interface AiVideoJobData {
   subtitleConfig?: Record<string, unknown>
 }
 
-// ── Helper Functions ──────────────────────────────────
+// ── Helper API Functions ──────────────────────────────
+
+/**
+ * BullMQ expects jobs to be added via Lua scripts to handle complex state. 
+ * Since Serverless Cloud Run VPC blocks native TCP (port 6379), we use 
+ * Upstash REST via HTTP to push basic jobs to the 'Wait' queue.
+ */
+async function submitJobViaREST(queueName: string, jobId: string, data: any) {
+  const timestamp = Date.now()
+  const jobKey = `bull:${queueName}:${jobId}`
+  
+  // 1. Create the BullMQ Job Hash
+  await upstash.hset(jobKey, {
+    name: jobId,
+    data: JSON.stringify(data),
+    opts: JSON.stringify({ jobId, attempts: 3, delay: 0 }),
+    timestamp,
+    delay: 0,
+    priority: 0,
+  })
+
+  // 2. Push to the Wait list
+  await upstash.rpush(`bull:${queueName}:wait`, jobId)
+  
+  // 3. Emit the waiting event for workers to pick it up
+  await upstash.publish(`bull:${queueName}:events`, JSON.stringify({
+    event: 'waiting',
+    jobId,
+  }))
+}
 
 export async function addVideoToQueue(
   videoId: string,
@@ -173,9 +221,14 @@ export async function addVideoToQueue(
     voiceSpeed,
   }
 
-  await scriptQueue.add(`script-${videoId}`, jobData, {
-    jobId: `script-${videoId}`,
-  })
+  if (isWorker) {
+    await scriptQueue.add(`script-${videoId}`, jobData, {
+      jobId: `script-${videoId}`,
+    })
+  } else {
+    // Web app safely pushes state via HTTPS REST
+    await submitJobViaREST('script-generation', `script-${videoId}`, jobData)
+  }
 
   // Create RenderJob record in DB
   await prisma.renderJob.upsert({
@@ -227,9 +280,13 @@ export async function addAiVideoToQueue(
   videoId: string,
   jobData: AiVideoJobData
 ): Promise<void> {
-  await aiVideoQueue.add(`ai-video-${videoId}`, jobData, {
-    jobId: `ai-video-${videoId}`,
-  })
+  if (isWorker) {
+    await aiVideoQueue.add(`ai-video-${videoId}`, jobData, {
+      jobId: `ai-video-${videoId}`,
+    })
+  } else {
+    await submitJobViaREST('ai-video-generation', `ai-video-${videoId}`, jobData)
+  }
 
   // Create RenderJob record in DB
   await prisma.renderJob.upsert({
