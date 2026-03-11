@@ -5,9 +5,9 @@ const ADMIN_COOKIE = 'admin_token'
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
 function getSecret(): string {
-    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+    const secret = process.env.JWT_SECRET
     if (!secret) {
-        throw new Error('[ADMIN AUTH] AUTH_SECRET or NEXTAUTH_SECRET env var is required')
+        throw new Error('[ADMIN AUTH] JWT_SECRET env var is required')
     }
     return secret
 }

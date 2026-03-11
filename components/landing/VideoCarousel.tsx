@@ -101,6 +101,7 @@ function VideoCarousel() {
           {/* Nav buttons */}
           <button
             onClick={() => setCurrent((c) => (c === 0 ? videos.length - 1 : c - 1))}
+            aria-label="Previous video"
             className="absolute left-0 z-10 w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors cursor-pointer"
           >
             <ChevronLeft size={18} />
@@ -108,6 +109,7 @@ function VideoCarousel() {
 
           <button
             onClick={() => setCurrent((c) => (c === videos.length - 1 ? 0 : c + 1))}
+            aria-label="Next video"
             className="absolute right-0 z-10 w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors cursor-pointer"
           >
             <ChevronRight size={18} />
@@ -174,14 +176,19 @@ function VideoCarousel() {
           {videos.map((_: CarouselVideo, i: number) => (
             <button
               key={i}
+              aria-label={`Go to video ${i + 1}`}
               onClick={() => setCurrent(i)}
-              className={cn(
-                'w-2 h-2 rounded-full transition-all cursor-pointer',
-                i === current
-                  ? 'bg-[var(--accent)] w-6'
-                  : 'bg-[var(--text-dim)]/30 hover:bg-[var(--text-dim)]'
-              )}
-            />
+              className="p-1 cursor-pointer"
+            >
+              <div
+                className={cn(
+                  'h-2 rounded-full transition-all',
+                  i === current
+                    ? 'bg-[var(--accent)] w-6'
+                    : 'w-2 bg-[var(--text-dim)]/30 hover:bg-[var(--text-dim)]'
+                )}
+              />
+            </button>
           ))}
         </div>
       </div>

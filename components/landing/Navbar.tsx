@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ const NAV_LINKS = [
 ]
 
 function Navbar() {
-  const { data: session } = useSession()
+  const { isLoaded, isSignedIn } = useUser()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -45,7 +45,7 @@ function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-[13px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              className="text-[14px] font-medium text-[var(--text-primary)] hover:text-white transition-colors"
             >
               {link.label}
             </a>
@@ -54,7 +54,7 @@ function Navbar() {
 
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          {session ? (
+          {isSignedIn ? (
             <Link href="/dashboard">
               <Button size="sm">Dashboard</Button>
             </Link>
@@ -97,13 +97,13 @@ function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block text-[14px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  className="block text-[15px] font-medium text-[var(--text-primary)] hover:text-white transition-colors"
                 >
                   {link.label}
                 </a>
               ))}
               <div className="pt-3 border-t border-[var(--border)]">
-                {session ? (
+                {isSignedIn ? (
                   <Link href="/dashboard">
                     <Button className="w-full" size="sm">
                       Dashboard

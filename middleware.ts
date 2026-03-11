@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth/authOptions'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { Redis } from '@upstash/redis'
@@ -39,7 +39,6 @@ async function checkRateLimit(
   const key = `ratelimit:${userId}:${routeName}`
 
   try {
-    // Pipeline: INCR + EXPIRE in single atomic round-trip
     const pipeline = client.pipeline()
     pipeline.incr(key)
     pipeline.expire(key, windowSec)
@@ -53,7 +52,6 @@ async function checkRateLimit(
 
     return { allowed: true, remaining: limit - count }
   } catch {
-    // Fail OPEN — allow request when Redis is down to prevent blocking logins
     console.warn('[rateLimit] Redis unreachable, allowing request through')
     return { allowed: true, remaining: limit }
   }
@@ -61,86 +59,80 @@ async function checkRateLimit(
 
 // ── Middleware ────────────────────────────────────────
 
-export default auth(async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const session = (request as unknown as { auth: { user?: { id?: string } } | null }).auth
-
-  // ── Public routes (skip auth) ──────────────────────
-  const publicPaths = [
+const isPublicRoute = createRouteMatcher([
     '/',
-    '/login',
+    '/login(.*)',
     '/about',
     '/blog',
     '/contact',
     '/changelog',
-    '/admin',
-    '/api/auth',
-    '/api/webhooks',
-    '/api/inngest',
-    '/_next',
-    '/favicon.ico',
-    '/logo',
-    '/images',
-    '/videos',
+    '/admin(.*)',
+    '/api/auth(.*)',
+    '/api/admin(.*)',
+    '/api/webhooks(.*)',
+    '/api/inngest(.*)',
     '/policy',
     '/terms-service',
     '/sitemap.xml',
     '/robots.txt',
-  ]
+    '/(.*)/_next(.*)',
+    '/favicon.ico',
+    '/logo(.*)',
+    '/images(.*)',
+    '/videos(.*)'
+])
 
-  const isPublic = publicPaths.some(
-    (path) => pathname === path || pathname.startsWith(path + '/')
-  )
+export default clerkMiddleware(async (auth, req: NextRequest) => {
+    const { pathname } = req.nextUrl
 
-  if (isPublic) {
-    return NextResponse.next()
-  }
-
-  // ── Auth check ─────────────────────────────────────
-  if (!session?.user?.id) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  // ── Rate limiting for specific API routes ──────────
-  for (const [route, config] of Object.entries(RATE_LIMITS)) {
-    if (pathname.startsWith(route)) {
-      const { allowed, remaining } = await checkRateLimit(
-        session.user.id,
-        route.replace(/\//g, ':'),
-        config.limit,
-        config.windowSec
-      )
-
-      if (!allowed) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Rate limit exceeded. Try again in an hour.',
-          },
-          {
-            status: 429,
-            headers: {
-              'X-RateLimit-Limit': config.limit.toString(),
-              'X-RateLimit-Remaining': '0',
-              'Retry-After': config.windowSec.toString(),
-            },
-          }
-        )
-      }
-
-      // Add rate limit headers to response
-      const response = NextResponse.next()
-      response.headers.set('X-RateLimit-Limit', config.limit.toString())
-      response.headers.set('X-RateLimit-Remaining', remaining.toString())
-      return response
+    if (!isPublicRoute(req)) {
+        await auth.protect()
     }
-  }
 
-  return NextResponse.next()
+// ── Rate limiting for specific API routes ──────────
+    for (const [route, config] of Object.entries(RATE_LIMITS)) {
+        if (pathname.startsWith(route)) {
+            const { userId } = await auth()
+            if (!userId) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            }
+
+            const { allowed, remaining } = await checkRateLimit(
+                userId,
+                route.replace(/\//g, ':'),
+                config.limit,
+                config.windowSec
+            )
+
+            if (!allowed) {
+                return NextResponse.json(
+                    { success: false, error: 'Rate limit exceeded. Try again in an hour.' },
+                    {
+                        status: 429,
+                        headers: {
+                            'X-RateLimit-Limit': config.limit.toString(),
+                            'X-RateLimit-Remaining': '0',
+                            'Retry-After': config.windowSec.toString(),
+                        },
+                    }
+                )
+            }
+
+            const response = NextResponse.next()
+            response.headers.set('X-RateLimit-Limit', config.limit.toString())
+            response.headers.set('X-RateLimit-Remaining', remaining.toString())
+            return response
+        }
+    }
+
+    return NextResponse.next()
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
 }

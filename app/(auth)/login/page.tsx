@@ -1,8 +1,5 @@
-'use client'
-
-import { signIn } from 'next-auth/react'
+import { SignIn } from '@clerk/nextjs'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
 
 // ── Floating Video Card ───────────────────────────────
@@ -59,36 +56,8 @@ function FloatingCard({
   )
 }
 
-// ── Google Logo SVG ───────────────────────────────────
-function GoogleLogo() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </svg>
-  )
-}
-
 // ── Login Page ────────────────────────────────────────
 export default function LoginPage() {
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/dashboard' })
-  }
-
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#0D0D11' }}>
       {/* Left decorative panel — hidden on mobile */}
@@ -142,100 +111,25 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="w-full max-w-[360px]"
+          className="w-full max-w-[400px] flex items-center justify-center"
         >
-          {/* Logo */}
-          <Logo size="md" href={undefined} />
-
-          {/* Headline */}
-          <h1
-            className="text-[28px] font-bold mt-8"
-            style={{
-              color: '#F5F5F7',
-              letterSpacing: '-0.5px',
-              lineHeight: 1.2,
-            }}
-          >
-            Welcome back
-          </h1>
-          <p
-            className="text-[14px] mt-2"
-            style={{ color: 'rgba(245,245,247,0.45)' }}
-          >
-            Sign in to your account
-          </p>
-
-          {/* Google Sign In Button */}
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full h-[44px] rounded-[8px] flex items-center justify-center gap-3 mt-8 transition-colors duration-150 cursor-pointer"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#F5F5F7',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                'rgba(255,255,255,0.1)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                'rgba(255,255,255,0.06)'
-            }}
-          >
-            <GoogleLogo />
-            <span className="text-[14px] font-medium">
-              Continue with Google
-            </span>
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mt-6">
-            <div
-              className="flex-1 h-px"
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-            />
-            <span
-              className="text-[11px]"
-              style={{ color: 'rgba(245,245,247,0.25)' }}
-            >
-              or
-            </span>
-            <div
-              className="flex-1 h-px"
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-            />
-          </div>
-
-          {/* Fine print */}
-          <p
-            className="text-center mt-8 text-[11px] leading-relaxed"
-            style={{ color: 'rgba(245,245,247,0.25)' }}
-          >
-            By signing in, you agree to our{' '}
-            <Link
-              href="/terms-service"
-              className="underline hover:text-[rgba(245,245,247,0.5)] transition-colors"
-            >
-              Terms
-            </Link>{' '}
-            and{' '}
-            <Link
-              href="/policy"
-              className="underline hover:text-[rgba(245,245,247,0.5)] transition-colors"
-            >
-              Privacy Policy
-            </Link>
-          </p>
-
-          {/* New user note */}
-          <p
-            className="text-center mt-4 text-[11px] leading-relaxed"
-            style={{ color: 'rgba(245,245,247,0.25)' }}
-          >
-            No account needed — Google sign-in creates your account
-            automatically.
-          </p>
+          <SignIn appearance={{
+            elements: {
+              rootBox: "w-full",
+              card: "bg-transparent shadow-none border border-[rgba(255,255,255,0.06)] rounded-xl",
+              headerTitle: "text-[#F5F5F7]",
+              headerSubtitle: "text-[rgba(245,245,247,0.45)]",
+              socialButtonsBlockButton: "border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] text-[#F5F5F7]",
+              socialButtonsBlockButtonText: "text-[#F5F5F7] font-medium",
+              dividerLine: "bg-[rgba(255,255,255,0.06)]",
+              dividerText: "text-[rgba(245,245,247,0.25)]",
+              formFieldLabel: "text-[#F5F5F7]",
+              formFieldInput: "bg-[#0D0D11] border-[rgba(255,255,255,0.12)] text-[#F5F5F7]",
+              formButtonPrimary: "bg-blue-600 hover:bg-blue-500 text-white",
+              footerActionText: "text-[rgba(245,245,247,0.45)]",
+              footerActionLink: "text-blue-500 hover:text-blue-400"
+            }
+          }} />
         </motion.div>
       </div>
     </div>

@@ -201,7 +201,7 @@ function buildWeeklyReportHTML(data: {
       </div>
 
       <div style="text-align: center; margin-top: 32px;">
-        <a href="${process.env.NEXTAUTH_URL ?? 'https://autopost.ai'}/dashboard"
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://autopostai.video'}/dashboard"
            style="display: inline-block; background: #ffffff; color: #0a0a0a; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;">
           View Full Analytics →
         </a>
@@ -210,7 +210,7 @@ function buildWeeklyReportHTML(data: {
       <div style="text-align: center; margin-top: 32px; font-size: 12px; color: #555;">
         <p>Keep creating, ${data.name}! 🚀</p>
         <p style="margin-top: 12px;">
-          <a href="${process.env.NEXTAUTH_URL ?? 'https://autopost.ai'}/settings" style="color: #555; text-decoration: underline;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://autopostai.video'}/settings" style="color: #555; text-decoration: underline;">
             Manage notification preferences
           </a>
         </p>

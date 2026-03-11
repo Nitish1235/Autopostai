@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { ToastProvider } from '@/components/ui/toast'
-import { AuthProvider } from '@/components/providers/AuthProvider'
+import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
 const inter = Inter({
@@ -80,7 +80,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}>
-        <AuthProvider>
+        <ClerkProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -91,7 +91,7 @@ export default function RootLayout({
               {children}
             </ToastProvider>
           </ThemeProvider>
-        </AuthProvider>
+        </ClerkProvider>
       </body>
     </html>
   )

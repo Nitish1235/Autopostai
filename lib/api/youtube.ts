@@ -6,7 +6,7 @@ const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
 const YOUTUBE_UPLOAD_BASE = 'https://www.googleapis.com/upload/youtube/v3'
 const YOUTUBE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID ?? ''
 const YOUTUBE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET ?? ''
-const APP_URL = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 // ── Get YouTube Tokens ───────────────────────────────
 
