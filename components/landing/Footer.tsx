@@ -14,9 +14,9 @@ const FOOTER_LINKS = {
     { label: 'Contact', href: '/contact' },
   ],
   Legal: [
-    { label: 'Privacy Policy', href: '/policy' },
-    { label: 'Terms of Service', href: '/terms-service' },
-    { label: 'Cookie Policy', href: '/policy' },
+    { label: 'Privacy Policy', href: 'https://autopostai.video/policy' },
+    { label: 'Terms of Service', href: 'https://autopostai.video/terms-service' },
+    { label: 'Cookie Policy', href: 'https://autopostai.video/policy' },
   ],
 }
 
@@ -63,10 +63,10 @@ function Footer() {
             © {new Date().getFullYear()} AutoPost AI. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <Link href="/policy" className="text-[11px] text-[var(--text-dim)] hover:text-white transition-colors">
+            <Link href="https://autopostai.video/policy" className="text-[11px] text-[var(--text-dim)] hover:text-white transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms-service" className="text-[11px] text-[var(--text-dim)] hover:text-white transition-colors">
+            <Link href="https://autopostai.video/terms-service" className="text-[11px] text-[var(--text-dim)] hover:text-white transition-colors">
               Terms of Service
             </Link>
             <span className="text-[11px] text-[var(--text-dim)] ml-4 border-l border-[var(--border)] pl-4">
