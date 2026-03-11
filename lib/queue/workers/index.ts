@@ -29,7 +29,25 @@ console.log(`[worker] Render worker initialized (concurrency: 1)`)
 console.log(`[worker] Publish worker initialized (concurrency: 2)`)
 console.log(`[worker] AI Video worker initialized (concurrency: 2)`)
 
-// ── Health Check Server Removed (Using Next.js Native App Route Instead) ──────
+// ── Health Check Server (Cloud Run requirement) ──────
+
+const PORT = 8080
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' })
+  res.end('AutoPost AI Worker is running!')
+})
+
+server.on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`[worker] Port ${PORT} already in use. Skipping server initialization.`)
+  } else {
+    console.error('[worker] Server error:', err)
+  }
+})
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[worker] Health check server listening on port ${PORT} at 0.0.0.0`)
+})
 
 // ── Graceful Shutdown ────────────────────────────────
 
@@ -44,7 +62,9 @@ async function shutdown() {
     aiVideoWorker.close(),
   ])
 
-// Health check server closed.
+  server.close(() => {
+    console.log('[worker] Health check server closed.')
+  })
 
   console.log('[worker] All workers closed. Exiting.')
   process.exit(0)
