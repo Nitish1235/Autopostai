@@ -1,3 +1,5 @@
+'use client'
+
 import { SignIn } from '@clerk/nextjs'
 import { motion } from 'framer-motion'
 import { Logo } from '@/components/ui/Logo'
