@@ -10,24 +10,24 @@ import { Redis as UpstashRedis } from '@upstash/redis'
 
 const isWorker = process.env.IS_WORKER === 'true'
 
+export const REDIS_OPTIONS: any = {
+  maxRetriesPerRequest: null,
+  retryStrategy(times: number) {
+    if (!process.env.REDIS_URL) return null;
+    return Math.min(times * 100, 3000); 
+  },
+  enableReadyCheck: false,
+  family: 0,
+  connectTimeout: 20000,
+  commandTimeout: 15000,
+  keepAlive: 10000,
+  lazyConnect: !isWorker, // Lazy on web, eager on worker
+  tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
+}
+
 // ── Redis Connection (Worker Only) ────────────────────
-// Only Workers establish the heavy TCP socket connection on port 6379. 
-// Web containers will use Upstash HTTP API to enqueue jobs via HTTPS.
 const connection = isWorker 
-  ? new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-      maxRetriesPerRequest: null,
-      retryStrategy(times) {
-        if (!process.env.REDIS_URL) return null;
-        return Math.min(times * 100, 3000); 
-      },
-      enableReadyCheck: false,
-      family: 0,
-      connectTimeout: 20000,
-      commandTimeout: 15000,
-      keepAlive: 10000,
-      lazyConnect: false,
-      tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
-    })
+  ? new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
   : new Redis('redis://dummy:6379', { lazyConnect: true }) // Dummy connection for Web so BullMQ objects construct safely
 
 // ── Upstash HTTP Client (Web Only) ────────────────────

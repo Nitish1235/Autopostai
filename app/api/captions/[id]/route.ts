@@ -3,15 +3,11 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth/authOptions'
 import { prisma } from '@/lib/db/prisma'
 import { generateCaptions } from '@/lib/api/openai'
-import Redis from 'ioredis'
+import { Redis } from '@upstash/redis'
 
-const redis = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (!process.env.REDIS_URL) return null;
-    return Math.min(times * 50, 2000);
-  },
-  enableReadyCheck: false,
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || 'https://dummy.upstash.io',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || 'dummy_token',
 })
 
 // ── PUT Schema ───────────────────────────────────────
@@ -58,7 +54,7 @@ export async function GET(
 
     // Check Redis cache
     const cacheKey = `captions:${videoId}`
-    const cached = await redis.get(cacheKey)
+    const cached = await redis.get<string>(cacheKey)
     if (cached) {
       return NextResponse.json({
         success: true,
@@ -98,7 +94,7 @@ export async function GET(
     const captions = { tiktok, instagram, youtube, x }
 
     // Cache in Redis with 1hr TTL
-    await redis.set(cacheKey, JSON.stringify(captions), 'EX', 3600)
+    await redis.set(cacheKey, JSON.stringify(captions), { ex: 3600 })
 
     return NextResponse.json({
       success: true,
@@ -156,7 +152,7 @@ export async function PUT(
 
     // Save to Redis cache with 7 day TTL
     const cacheKey = `captions:${videoId}`
-    await redis.set(cacheKey, JSON.stringify(parsed.data.captions), 'EX', 604800)
+    await redis.set(cacheKey, JSON.stringify(parsed.data.captions), { ex: 604800 })
 
     return NextResponse.json({ success: true })
   } catch (error) {

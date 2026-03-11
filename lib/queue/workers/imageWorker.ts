@@ -4,18 +4,12 @@ import { generateImage } from '@/lib/api/runware'
 import { uploadBuffer, generateSegmentKey } from '@/lib/gcs/storage'
 import { prisma } from '@/lib/db/prisma'
 import { checkAndTriggerRender } from '@/lib/queue/workers/renderTrigger'
+import { REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import type { ImageJob } from '@/lib/queue/videoQueue'
 import axios from 'axios'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (!process.env.REDIS_URL) return null;
-    return Math.min(times * 50, 2000);
-  },
-  enableReadyCheck: false,
-})
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
 
 // ── Image Generation Worker ──────────────────────────
 

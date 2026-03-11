@@ -3,17 +3,13 @@ import Redis from 'ioredis'
 import { renderVideo } from '@/lib/ffmpeg/buildCommand'
 import { prisma } from '@/lib/db/prisma'
 import { addCredits } from '@/lib/utils/credits'
-import { publishQueue } from '@/lib/queue/videoQueue'
+import { publishQueue, REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import { inngest } from '@/lib/inngest/client'
 import type { RenderJob } from '@/lib/queue/videoQueue'
 import type { ScriptSegment, SubtitleConfig } from '@/types'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) { if (!process.env.REDIS_URL) return null; return Math.min(times * 50, 2000); },
-  enableReadyCheck: false
-})
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
 
 // ── Render Worker ────────────────────────────────────
 

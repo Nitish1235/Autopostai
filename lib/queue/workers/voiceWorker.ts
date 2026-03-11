@@ -3,15 +3,12 @@ import Redis from 'ioredis'
 import { generateVoiceAndUpload } from '@/lib/api/unrealSpeech'
 import { prisma } from '@/lib/db/prisma'
 import { checkAndTriggerRender } from '@/lib/queue/workers/renderTrigger'
+import { REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import type { VoiceJob } from '@/lib/queue/videoQueue'
 import type { ScriptSegment } from '@/types'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) { if (!process.env.REDIS_URL) return null; return Math.min(times * 50, 2000); },
-  enableReadyCheck: false
-})
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
 
 // ── Voice Generation Worker ──────────────────────────
 

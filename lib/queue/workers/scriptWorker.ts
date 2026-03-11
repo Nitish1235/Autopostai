@@ -3,7 +3,7 @@ import Redis from 'ioredis'
 import { generateScript } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { addCredits } from '@/lib/utils/credits'
-import { imageQueue, voiceQueue } from '@/lib/queue/videoQueue'
+import { imageQueue, voiceQueue, REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import {
   buildImagePrompt,
   NEGATIVE_PROMPT,
@@ -13,11 +13,7 @@ import { getModelForStyle } from '@/lib/api/runware'
 import type { ScriptJob, ImageJob, VoiceJob } from '@/lib/queue/videoQueue'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) { if (!process.env.REDIS_URL) return null; return Math.min(times * 50, 2000); },
-  enableReadyCheck: false
-})
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
 
 // ── Script Generation Worker ─────────────────────────
 

@@ -5,17 +5,11 @@ import { uploadToYouTube } from '@/lib/api/youtube'
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
+import { REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import type { PublishJob } from '@/lib/queue/videoQueue'
 
 // ── Redis Connection ─────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (!process.env.REDIS_URL) return null;
-    return Math.min(times * 50, 2000);
-  },
-  enableReadyCheck: false,
-})
+const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
 
 // ── Publish Worker ───────────────────────────────────
 
