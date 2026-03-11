@@ -53,9 +53,9 @@ async function checkRateLimit(
 
     return { allowed: true, remaining: limit - count }
   } catch {
-    // FIX #12: Fail CLOSED — reject when Redis is down
-    console.error('[rateLimit] Redis unreachable, blocking request')
-    return { allowed: false, remaining: 0 }
+    // Fail OPEN — allow request when Redis is down to prevent blocking logins
+    console.warn('[rateLimit] Redis unreachable, allowing request through')
+    return { allowed: true, remaining: limit }
   }
 }
 
