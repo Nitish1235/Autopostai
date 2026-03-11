@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth/authOptions'
 import { prisma } from '@/lib/db/prisma'
-import { publishQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 
 // ── Schema ───────────────────────────────────────────
 
@@ -110,10 +110,12 @@ export async function POST(
         })
 
         // 6. Add to publish queue (single platform)
-        await publishQueue.add(`publish-${videoId}-${platform}-retry`, {
+        await enqueueJob('/jobs/publish', {
             videoId,
             userId: session.user.id,
             platforms: [platform],
+        }, {
+            deduplicationId: `publish-${videoId}-${platform}-${Date.now()}`,
         })
 
         return NextResponse.json({

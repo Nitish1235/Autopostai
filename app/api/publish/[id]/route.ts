@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth/authOptions'
 import { prisma } from '@/lib/db/prisma'
-import { publishQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 
 // ── Schema ───────────────────────────────────────────
 
@@ -133,15 +133,13 @@ export async function POST(
       data: updateData,
     })
 
-    await publishQueue.add(
-      `publish-${videoId}`,
-      {
-        videoId,
-        userId: session.user.id,
-        platforms: platformsToPublish,
-      },
-      { jobId: `publish-${videoId}-${Date.now()}` }
-    )
+    await enqueueJob('/jobs/publish', {
+      videoId,
+      userId: session.user.id,
+      platforms: platformsToPublish,
+    }, {
+      deduplicationId: `publish-${videoId}-${Date.now()}`,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

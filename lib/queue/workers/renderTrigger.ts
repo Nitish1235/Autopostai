@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/db/prisma'
-import { renderQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 import type { ScriptSegment } from '@/types'
 
 // ── Check and Trigger Render ─────────────────────────
 // Shared between imageWorker and voiceWorker.
 // Called after each image or voice segment completes.
-// When all assets are ready, triggers the render job.
+// When all assets are ready, triggers the render job via QStash.
 
 export async function checkAndTriggerRender(
   videoId: string,
@@ -45,7 +45,7 @@ export async function checkAndTriggerRender(
     (url) => !!url && url.length > 0
   ).length
 
-  // 4. Count completed voice segments (segments with audioUrl set)
+  // 4. Count completed voice segments
   const completedVoice = script.filter(
     (seg) => !!seg.audioUrl && seg.audioUrl.length > 0
   ).length
@@ -70,9 +70,9 @@ export async function checkAndTriggerRender(
     return
   }
 
-  // 7. Trigger render
+  // 7. Trigger render via QStash
   console.log(
-    `[renderTrigger] All assets ready. Render job added for ${videoId}`
+    `[renderTrigger] All assets ready. Queuing render for ${videoId}`
   )
 
   // Update video status
@@ -91,21 +91,17 @@ export async function checkAndTriggerRender(
     },
   })
 
-  // Add job to render queue
-  await renderQueue.add(
-    `render-${videoId}`,
-    {
-      videoId,
-      userId,
-      format: video.format,
-      subtitleConfig: video.subtitleConfig as Record<string, unknown>,
-      musicMood: video.musicMood,
-      musicVolume: video.musicVolume,
-      script: script as unknown as Record<string, unknown>[],
-      imageUrls: video.imageUrls,
-    },
-    {
-      jobId: `render-${videoId}`,
-    }
-  )
+  // Enqueue render job via QStash
+  await enqueueJob('/jobs/render', {
+    videoId,
+    userId,
+    format: video.format,
+    subtitleConfig: video.subtitleConfig as Record<string, unknown>,
+    musicMood: video.musicMood,
+    musicVolume: video.musicVolume,
+    script: script as unknown as Record<string, unknown>[],
+    imageUrls: video.imageUrls,
+  }, {
+    deduplicationId: `render-${videoId}`,
+  })
 }

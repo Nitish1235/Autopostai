@@ -1,8 +1,6 @@
-import { Worker, Job } from 'bullmq'
-import Redis from 'ioredis'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { writeFile, unlink, mkdir } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { prisma } from '@/lib/db/prisma'
@@ -22,17 +20,13 @@ import {
 } from '@/lib/ffmpeg/audioMix'
 import { uploadFromPath, generateVideoKey } from '@/lib/gcs/storage'
 import { AI_VIDEO_DURATION } from '@/lib/utils/constants'
-import { REDIS_OPTIONS } from '@/lib/queue/videoQueue'
 import axios from 'axios'
 
 const execFileAsync = promisify(execFile)
 
-// ── Redis Connection ──────────────────────────────────
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', REDIS_OPTIONS)
+// ── AI Video Handler ─────────────────────────────────
 
-// ── AI Video Worker ───────────────────────────────────
-
-async function processAiVideoJob(job: Job<AiVideoJobData>) {
+export async function handleAiVideoJob(data: AiVideoJobData) {
     const {
         videoId,
         userId,
@@ -45,7 +39,7 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
         voiceSpeed,
         musicMood,
         musicVolume,
-    } = job.data
+    } = data
 
     const startTime = Date.now()
 
@@ -92,15 +86,13 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
         let finalVideoUrl: string
 
         if (aiAudioMode === 'replace') {
-            // ── REPLACE MODE: Mute AI audio → generate voice → mix music → mux ──
-
             await updateProgress(videoId, 'generating_voice', 60)
             await prisma.video.update({
                 where: { id: videoId },
                 data: { status: 'generating_voice' },
             })
 
-            // 2a. Download the Sora 2 video to local temp
+            // Download the Sora 2 video to local temp
             const rawVideoPath = path.join(tmpDir, 'sora_raw.mp4')
             const videoResponse = await axios.get(result.videoUrl, {
                 responseType: 'arraybuffer',
@@ -108,13 +100,12 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
             })
             await writeFile(rawVideoPath, Buffer.from(videoResponse.data))
 
-            // Store the raw AI audio for reference
             await prisma.video.update({
                 where: { id: videoId },
                 data: { aiRawAudioUrl: result.videoUrl },
             })
 
-            // 2b. Generate voiceover from topic using UnrealSpeech TTS
+            // Generate voiceover
             const voiceResult = await generateVoice({
                 text: topic,
                 voiceId: voiceId ?? 'ryan',
@@ -126,10 +117,10 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
 
             await updateProgress(videoId, 'generating_voice', 70)
 
-            // 2c. Get background music path
+            // Get background music path
             const musicPath = getMusicPath(musicMood ?? 'upbeat', videoId)
 
-            // 2d. Mix voice + music → mixed_audio.aac
+            // Mix voice + music
             const mixedAudioPath = path.join(tmpDir, 'mixed_audio.aac')
             const mixArgs = buildAudioMixCommand({
                 voicePath,
@@ -145,7 +136,7 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
 
             await updateProgress(videoId, 'rendering', 80)
 
-            // 2e. Mux: strip original audio + add mixed audio → final.mp4
+            // Mux: strip original audio + add mixed audio
             const finalPath = path.join(tmpDir, 'final.mp4')
             const muxArgs = buildFinalMuxCommand({
                 videoPath: rawVideoPath,
@@ -159,12 +150,10 @@ async function processAiVideoJob(job: Job<AiVideoJobData>) {
 
             await updateProgress(videoId, 'rendering', 90)
 
-            // 2f. Upload final video to GCS
+            // Upload final video to GCS
             const videoKey = generateVideoKey(userId, videoId)
             finalVideoUrl = await uploadFromPath(finalPath, videoKey, 'video/mp4')
         } else {
-            // ── KEEP_AI MODE: Just download and upload the Sora 2 video as-is ──
-
             await updateProgress(videoId, 'rendering', 70)
 
             const { gcsVideoUrl } = await downloadAndUploadVideo({
@@ -254,22 +243,3 @@ async function updateProgress(
         data: { stage, progress, status: 'processing' },
     })
 }
-
-// ── Create Worker ─────────────────────────────────────
-
-export const aiVideoWorker = new Worker(
-    'ai-video-generation',
-    processAiVideoJob,
-    {
-        connection,
-        concurrency: 2,
-    }
-)
-
-aiVideoWorker.on('failed', (job, error) => {
-    console.error(`[aiVideoWorker] Job ${job?.id} failed:`, error.message)
-})
-
-aiVideoWorker.on('completed', (job) => {
-    console.log(`[aiVideoWorker] Job ${job.id} completed`)
-})

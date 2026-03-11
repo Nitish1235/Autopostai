@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth/authOptions'
 import { prisma } from '@/lib/db/prisma'
-import { renderQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 
 // ── Schema ───────────────────────────────────────────
 
@@ -128,20 +128,18 @@ export async function POST(request: Request) {
     })
 
     // Add to render queue
-    await renderQueue.add(
-      `render-${videoId}`,
-      {
-        videoId,
-        userId: session.user.id,
-        format: video.format,
-        subtitleConfig: video.subtitleConfig as Record<string, unknown>,
-        musicMood: video.musicMood,
-        musicVolume: video.musicVolume,
-        script: video.script as Record<string, unknown>[],
-        imageUrls: video.imageUrls,
-      },
-      { jobId: `render-${videoId}` }
-    )
+    await enqueueJob('/jobs/render', {
+      videoId,
+      userId: session.user.id,
+      format: video.format,
+      subtitleConfig: video.subtitleConfig as Record<string, unknown>,
+      musicMood: video.musicMood,
+      musicVolume: video.musicVolume,
+      script: video.script as Record<string, unknown>[],
+      imageUrls: video.imageUrls,
+    }, {
+      deduplicationId: `render-${videoId}`,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

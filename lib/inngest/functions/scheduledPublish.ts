@@ -1,6 +1,6 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
-import { publishQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 
 // ── Scheduled Post Publisher ─────────────────────────
 // Runs every 15 minutes to check for scheduled posts due now
@@ -81,14 +81,10 @@ export const scheduledPublish = inngest.createFunction(
 
             if (!connection?.accessToken) continue
 
-            await publishQueue.add(`publish-${video.id}-${platform}`, {
+            await enqueueJob('/jobs/publish', {
               videoId: video.id,
               userId: video.userId,
-              platform,
-              videoUrl: video.videoUrl ?? '',
-              title: video.title,
-              description: video.topic ?? '',
-              accessToken: connection.accessToken,
+              platforms: [platform],
             })
           }
 

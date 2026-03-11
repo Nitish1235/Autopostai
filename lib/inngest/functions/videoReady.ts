@@ -1,6 +1,6 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
-import { publishQueue } from '@/lib/queue/videoQueue'
+import { enqueueJob } from '@/lib/queue/qstash'
 import { sendVideoReadyEmail } from '@/emails/VideoReady'
 
 // ── On Video Ready ───────────────────────────────────
@@ -86,14 +86,10 @@ export const onVideoReady = inngest.createFunction(
           )
           if (!connection?.accessToken) continue
 
-          await publishQueue.add(`publish-${video.id}-${platform}`, {
+          await enqueueJob('/jobs/publish', {
             videoId: video.id,
             userId,
-            platform,
-            videoUrl: video.videoUrl ?? '',
-            title: video.title,
-            description: video.topic ?? '',
-            accessToken: connection.accessToken,
+            platforms: [platform],
           })
         }
 
@@ -129,18 +125,11 @@ export const onVideoReady = inngest.createFunction(
             )
             if (!connection?.accessToken) continue
 
-            await publishQueue.add(
-              `publish-${video.id}-${platform}-auto`,
-              {
-                videoId: video.id,
-                userId,
-                platform,
-                videoUrl: video.videoUrl ?? '',
-                title: video.title,
-                description: video.topic ?? '',
-                accessToken: connection.accessToken,
-              }
-            )
+            await enqueueJob('/jobs/publish', {
+              videoId: video.id,
+              userId,
+              platforms: [platform],
+            })
           }
 
           // publishWorker sets status → 'posted' on success
