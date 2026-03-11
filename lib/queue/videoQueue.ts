@@ -10,7 +10,7 @@ const connection = new Redis(process.env.REDIS_URL ?? 'redis://dummy:6379', {
     return Math.min(times * 50, 2000);
   },
   enableReadyCheck: false,
-  family: 0,
+  family: 6,
   tls: process.env.REDIS_URL?.includes('rediss://') ? { rejectUnauthorized: false } : undefined,
 })
 
