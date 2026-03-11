@@ -30,7 +30,7 @@ export const metadata: Metadata = {
       'Generate and auto-publish AI faceless videos to TikTok, Instagram, YouTube and X. Fully automated.',
     type: 'website',
     siteName: 'AutoPost AI',
-    url: 'https://autopostai.com',
+    url: 'https://autopostai.video',
   },
   twitter: {
     card: 'summary_large_image',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     description:
       'Generate and auto-publish AI faceless videos to TikTok, Instagram, YouTube and X.',
   },
-  metadataBase: new URL('https://autopostai.com'),
+  metadataBase: new URL('https://autopostai.video'),
 }
 
 // JSON-LD for Google — WebSite + Organization with logo
@@ -47,12 +47,12 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'AutoPost AI',
-    url: 'https://autopostai.com',
+    url: 'https://autopostai.video',
     description:
       'Generate and auto-publish AI faceless videos to TikTok, Instagram, YouTube and X.',
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://autopostai.com/search?q={search_term_string}',
+      target: 'https://autopostai.video/search?q={search_term_string}',
       'query-input': 'required name=search_term_string',
     },
   },
@@ -60,8 +60,8 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'AutoPost AI',
-    url: 'https://autopostai.com',
-    logo: 'https://autopostai.com/apple-icon',
+    url: 'https://autopostai.video',
+    logo: 'https://autopostai.video/apple-icon',
     sameAs: [],
   },
 ]

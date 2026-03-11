@@ -69,6 +69,10 @@ export default auth(async function middleware(request: NextRequest) {
   const publicPaths = [
     '/',
     '/login',
+    '/about',
+    '/blog',
+    '/contact',
+    '/changelog',
     '/admin',
     '/api/auth',
     '/api/webhooks',

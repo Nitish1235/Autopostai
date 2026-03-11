@@ -3,27 +3,20 @@ import { Logo } from '@/components/ui/Logo'
 
 const FOOTER_LINKS = {
   Product: [
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Changelog', href: '#' },
+    { label: 'Features', href: '/#features' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'How It Works', href: '/#how-it-works' },
+    { label: 'Changelog', href: '/changelog' },
   ],
   Company: [
-    { label: 'About', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Contact', href: '#' },
+    { label: 'About', href: '/about' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'Contact', href: '/contact' },
   ],
   Legal: [
     { label: 'Privacy Policy', href: '/policy' },
     { label: 'Terms of Service', href: '/terms-service' },
     { label: 'Cookie Policy', href: '/policy' },
-  ],
-  Social: [
-    { label: 'Twitter / X', href: '#' },
-    { label: 'YouTube', href: '#' },
-    { label: 'TikTok', href: '#' },
-    { label: 'Discord', href: '#' },
   ],
 }
 
