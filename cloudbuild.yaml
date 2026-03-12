@@ -22,8 +22,8 @@ steps:
         # Create socket directory and start proxy in background
         mkdir -p /cloudsql
         /usr/local/bin/cloud-sql-proxy --unix-socket /cloudsql ${_CLOUDSQL_INSTANCE} &
-        PROXY_PID=$!
-        echo "Cloud SQL Proxy started (PID $PROXY_PID), waiting for socket..."
+        PROXY_PID=$$!
+        echo "Cloud SQL Proxy started (PID $$PROXY_PID), waiting for socket..."
         sleep 5
 
         # Install Prisma and push schema
@@ -32,7 +32,7 @@ steps:
           --schema=./prisma/schema.prisma \
           --skip-generate
 
-        kill $PROXY_PID
+        kill $$PROXY_PID
         echo "Migration complete."
     env:
       - 'DATABASE_URL=${_DATABASE_URL}'
