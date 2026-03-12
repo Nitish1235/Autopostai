@@ -4,18 +4,19 @@
 steps:
   # ── Step 0: Run Prisma migrations ────────────────────
   # Pushes schema to Cloud SQL before deploying new images.
-  # DATABASE_URL and DIRECT_URL are set in the Cloud Build trigger
-  # substitutions (never commit real credentials to this file).
-  - name: 'node:20-slim'
+  # Only _DATABASE_URL needs to be set in the Cloud Build trigger.
+  # DIRECT_URL = DATABASE_URL because Cloud SQL has no pgbouncer pooler.
+  - name: 'node:20'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
+        apt-get update -y && apt-get install -y openssl
         npm install --prefix /tmp/prisma-cli prisma@5 --no-save
         /tmp/prisma-cli/node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --skip-generate
     env:
       - 'DATABASE_URL=${_DATABASE_URL}'
-      - 'DIRECT_URL=${_DIRECT_URL}'
+      - 'DIRECT_URL=${_DATABASE_URL}'
 
   # ── Step 1: Build the Next.js web app image ──────────
   - name: 'gcr.io/cloud-builders/docker'
@@ -110,12 +111,11 @@ steps:
       - '--no-allow-unauthenticated'
 
 # Substitution variables — set these in Cloud Build trigger config
-# IMPORTANT: Set _DATABASE_URL and _DIRECT_URL in the trigger UI, not here!
+# IMPORTANT: Set _DATABASE_URL in the trigger UI, never commit credentials here!
 substitutions:
   _REGION: us-central1
   _REPO: autopost-ai
   _DATABASE_URL: ''     # Set in Cloud Build trigger → Add substitution
-  _DIRECT_URL: ''       # Set in Cloud Build trigger → Add substitution
   _NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''  # Clerk frontend key
 
 # Push images to Artifact Registry
