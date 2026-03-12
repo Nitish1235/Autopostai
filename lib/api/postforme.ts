@@ -1,10 +1,10 @@
 // ── PostForMe API — Unified Social Media Publishing ───
+// Docs: https://postforme.dev
+// API Base: https://api.postforme.dev/v1
 
 import axios from 'axios'
 
-const BASE_URL = 'https://app.postforme.dev/api/v1'
-// Note: We'll retrieve this from env, but let it fail gracefully if undefined early on
-// while the user is setting up their account
+const BASE_URL = 'https://api.postforme.dev/v1'
 const API_KEY = process.env.POSTFORME_API_KEY || ''
 
 // ── Interfaces ───────────────────────────────────────
@@ -16,12 +16,13 @@ export interface PostForMePostResult {
     status: string
 }
 
-export interface PostForMeAccountInfo {
+export interface PostForMeSocialAccount {
+    id: string
     platform: string
-    handle: string
-    displayName: string
-    followerCount: number
-    avatarUrl: string
+    username: string
+    display_name: string
+    profile_image_url: string
+    followers_count: number
 }
 
 // ── HTTP Helper ──────────────────────────────────────
@@ -61,92 +62,90 @@ async function postForMeFetch<T>(
     }
 }
 
-// ── Connect Account ──────────────────────────────────
+// ── List Connected Social Accounts ───────────────────
+// GET /v1/social-accounts
+// Returns all connected accounts for your project
 
-export async function connectAccount(params: {
-    platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
-    accessToken: string
-    refreshToken?: string
-}): Promise<PostForMeAccountInfo> {
-    // PostForMe typically handles OAuth natively via their frontend connections,
-    // but if you are doing White Label and importing tokens:
-    return postForMeFetch<PostForMeAccountInfo>('/accounts/connect', 'POST', {
-        platform: params.platform,
-        access_token: params.accessToken,
-        refresh_token: params.refreshToken,
-    })
+export async function listSocialAccounts(platform?: string): Promise<PostForMeSocialAccount[]> {
+    const query = platform ? `?platform=${platform}` : ''
+    const data = await postForMeFetch<{ data: PostForMeSocialAccount[] }>(
+        `/social-accounts${query}`,
+        'GET'
+    )
+    return data.data
 }
 
-// ── Post Video ───────────────────────────────────────
+// ── Generate Auth URL for Account Connection ─────────
+// POST /v1/social-accounts/auth-url
+// Returns a URL that takes the user to the platform's login
+
+export async function getAuthUrl(platform: string): Promise<string> {
+    const data = await postForMeFetch<{ url?: string; auth_url?: string }>(
+        '/social-accounts/auth-url',
+        'POST',
+        { platform }
+    )
+    return data.url || data.auth_url || ''
+}
+
+// ── Create Social Post (single platform) ─────────────
+// POST /v1/social-posts
+// Publishes content to one or more connected social accounts
 
 export async function postVideo(params: {
-    platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
-    accessToken: string
-    accountId?: string // Ideally PostForMe uses account IDs
+    socialAccountId: string
     videoUrl: string
     caption: string
     hashtags: string[]
-    thumbnailUrl?: string
 }): Promise<PostForMePostResult> {
     const fullCaption =
         params.caption +
         '\n\n' +
         params.hashtags.map((t) => `#${t}`).join(' ')
 
-    // We map the request to PostForMe's generic /posts endpoint
-    return postForMeFetch<PostForMePostResult>('/posts', 'POST', {
-        platforms: [params.platform],
-        // PostForMe uses explicit account IDs or auth tokens attached to the request
-        auth: {
-            access_token: params.accessToken
-        },
-        content: {
-            text: fullCaption,
-            media_urls: [params.videoUrl],
-        }
+    return postForMeFetch<PostForMePostResult>('/social-posts', 'POST', {
+        social_accounts: [params.socialAccountId],
+        caption: fullCaption,
+        media: [{ url: params.videoUrl }],
     })
 }
 
 // ── Post to Multiple Platforms ───────────────────────
+// Creates a post for each social account via PostForMe
 
 export async function postToMultiplePlatforms(params: {
     platforms: Array<{
-        platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
-        accessToken: string
+        platform: string
+        socialAccountId: string
     }>
     videoUrl: string
     caption: string
     hashtags: string[]
-    thumbnailUrl?: string
 }): Promise<PostForMePostResult[]> {
-    const results: PostForMePostResult[] = []
+    const fullCaption =
+        params.caption +
+        '\n\n' +
+        params.hashtags.map((t) => `#${t}`).join(' ')
 
-    const settled = await Promise.allSettled(
-        params.platforms.map((plat) =>
-            postVideo({
-                platform: plat.platform,
-                accessToken: plat.accessToken,
-                videoUrl: params.videoUrl,
-                caption: params.caption,
-                hashtags: params.hashtags,
-                thumbnailUrl: params.thumbnailUrl,
-            })
-        )
-    )
+    // PostForMe supports multiple social_accounts in one call
+    const socialAccountIds = params.platforms.map((p) => p.socialAccountId)
 
-    for (let i = 0; i < settled.length; i++) {
-        const result = settled[i]
-        if (result.status === 'fulfilled') {
-            results.push(result.value)
-        } else {
-            console.error(
-                `[postforme] Failed to post to ${params.platforms[i].platform}:`,
-                result.reason
-            )
-        }
+    try {
+        const result = await postForMeFetch<PostForMePostResult>('/social-posts', 'POST', {
+            social_accounts: socialAccountIds,
+            caption: fullCaption,
+            media: [{ url: params.videoUrl }],
+        })
+
+        // Map the single result to per-platform results
+        return params.platforms.map((p) => ({
+            ...result,
+            platform: p.platform,
+        }))
+    } catch (error) {
+        console.error('[postforme] Failed to post:', error)
+        throw error
     }
-
-    return results
 }
 
 // ── Get Post Analytics ───────────────────────────────
@@ -169,7 +168,7 @@ export async function getPostAnalytics(params: {
         comments: number;
         metrics?: { watch_rate: number }
     }>(
-        `/posts/${params.postId}/analytics?platform=${params.platform}`,
+        `/social-posts/${params.postId}/analytics?platform=${params.platform}`,
         'GET'
     )
 
@@ -180,18 +179,4 @@ export async function getPostAnalytics(params: {
         comments: data.comments || 0,
         watchRate: data.metrics?.watch_rate || 0,
     }
-}
-
-// ── Refresh Access Token ─────────────────────────────
-
-export async function refreshAccessToken(params: {
-    platform: string
-    refreshToken: string
-}): Promise<{ accessToken: string; expiresIn: number }> {
-    // Note: If using Quickstart Project, PostForMe handles refresh tokens automatically.
-    // If White Label:
-    return postForMeFetch('/accounts/refresh', 'POST', {
-        platform: params.platform,
-        refresh_token: params.refreshToken,
-    })
 }

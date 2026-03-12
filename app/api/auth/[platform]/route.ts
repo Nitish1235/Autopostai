@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 
-const POSTFORME_OAUTH_URL = 'https://app.postforme.dev/oauth'
+const POSTFORME_API_URL = 'https://api.postforme.dev/v1'
 const POSTFORME_API_KEY = process.env.POSTFORME_API_KEY ?? ''
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 export async function GET(
     request: Request,
@@ -29,16 +28,42 @@ export async function GET(
 
         const { platform } = await params
 
-        // All platforms (tiktok, instagram, youtube, x) go through PostForMe
-        const redirectUrl = new URL(POSTFORME_OAUTH_URL)
-        redirectUrl.searchParams.append('api_key', POSTFORME_API_KEY)
-        redirectUrl.searchParams.append('platform', platform)
-        redirectUrl.searchParams.append('state', userId)
-        redirectUrl.searchParams.append('redirect_uri', `${APP_URL}/api/platforms/postforme/callback`)
+        // Call PostForMe API to generate a platform-specific OAuth URL
+        // This returns a URL that takes the user directly to the platform's login
+        // (e.g., Instagram login, YouTube consent) — NOT PostForMe's dashboard
+        const response = await fetch(`${POSTFORME_API_URL}/social-accounts/auth-url`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${POSTFORME_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ platform }),
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error(`[auth] PostForMe API error:`, response.status, errorData)
+            return NextResponse.json(
+                { success: false, error: 'Failed to get platform auth URL' },
+                { status: 502 }
+            )
+        }
+
+        const data = await response.json()
+
+        // PostForMe returns the direct platform OAuth URL
+        const authUrl = data.url || data.auth_url || data.authUrl
+        if (!authUrl) {
+            console.error('[auth] PostForMe did not return an auth URL:', data)
+            return NextResponse.json(
+                { success: false, error: 'Invalid response from platform service' },
+                { status: 502 }
+            )
+        }
 
         return NextResponse.json({
             success: true,
-            data: { authUrl: redirectUrl.toString() },
+            data: { authUrl },
         })
     } catch (error) {
         console.error(`[auth] Error initializing OAuth flow:`, error)
@@ -48,3 +73,4 @@ export async function GET(
         )
     }
 }
+

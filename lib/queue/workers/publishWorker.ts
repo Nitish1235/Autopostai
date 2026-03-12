@@ -120,6 +120,7 @@ export async function handlePublishJob(data: PublishJob) {
     const successfulPlatforms: string[] = []
     const failedPlatforms: string[] = []
 
+    // accessToken field stores the PostForMe social_account_id
     const connectedPlatforms = platformsToPublish
       .map((platform) => {
         const conn = connections.find((c) => c.platform === platform)
@@ -129,11 +130,11 @@ export async function handlePublishJob(data: PublishJob) {
         }
         return {
           platform: platform as string,
-          accessToken: conn.accessToken,
+          socialAccountId: conn.accessToken, // This is the PostForMe social account ID
         }
       })
       .filter(
-        (p): p is { platform: string; accessToken: string } =>
+        (p): p is { platform: string; socialAccountId: string } =>
           p !== null
       )
 
@@ -148,7 +149,6 @@ export async function handlePublishJob(data: PublishJob) {
           videoUrl: video.videoUrl,
           caption: defaultCaption?.caption ?? video.title,
           hashtags: defaultCaption?.hashtags ?? [],
-          thumbnailUrl: video.thumbnailUrl ?? undefined,
         })
 
         for (const result of postForMeResults) {
