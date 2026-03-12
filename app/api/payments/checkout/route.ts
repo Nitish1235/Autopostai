@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import {
   createCustomer,
@@ -29,8 +29,8 @@ const VALID_PLAN_IDS: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     // Fetch user
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { id: true, name: true, email: true, dodoCustomerId: true, plan: true },
     })
 
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
         {
           type: 'credit_pack',
           credits: pack.credits.toString(),
-          userId: session.user.id,
+          userId: userId,
           packId: pack.id,
         }
       )

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
 
@@ -34,8 +34,8 @@ const UpdateSchema = z.object({
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -43,14 +43,14 @@ export async function GET() {
     }
 
     let config = await prisma.autopilotConfig.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: userId },
     })
 
     // Create default if not exists
     if (!config) {
       config = await prisma.autopilotConfig.create({
         data: {
-          userId: session.user.id,
+          userId: userId,
           schedule: JSON.stringify({
             monday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
             tuesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
@@ -78,8 +78,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -115,9 +115,9 @@ export async function PUT(request: Request) {
     if (data.aiOptimizeTime !== undefined) updateData.aiOptimizeTime = data.aiOptimizeTime
 
     const config = await prisma.autopilotConfig.upsert({
-      where: { userId: session.user.id },
+      where: { userId: userId },
       create: {
-        userId: session.user.id,
+        userId: userId,
         ...updateData,
       },
       update: updateData,
@@ -126,7 +126,7 @@ export async function PUT(request: Request) {
     // If enabling: check topic queue and trigger topic generation if needed
     if (data.enabled === true) {
       const pendingTopics = await prisma.topicQueue.count({
-        where: { userId: session.user.id, status: 'pending' },
+        where: { userId: userId, status: 'pending' },
       })
 
       if (pendingTopics < 3) {
@@ -135,7 +135,7 @@ export async function PUT(request: Request) {
           await inngest.send({
             name: 'topics/generate',
             data: {
-              userId: session.user.id,
+              userId: userId,
               niche,
               count: 7,
             },
@@ -147,7 +147,7 @@ export async function PUT(request: Request) {
 
       // Set nextRunAt to next scheduled slot
       await prisma.autopilotConfig.update({
-        where: { userId: session.user.id },
+        where: { userId: userId },
         data: {
           nextRunAt: getNextScheduledTime(config.schedule as Record<string, unknown[]>),
         },

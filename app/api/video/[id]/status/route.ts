@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import type { ScriptSegment } from '@/types'
 
@@ -12,9 +12,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // 1. Validate session
-    const session = await auth()
-    if (!session?.user?.id) {
+    // 1. Validate userId
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const { id: videoId } = await params
-    const userId = session.user.id
+
 
     // 2. Fetch video and verify ownership
     const video = await prisma.video.findUnique({

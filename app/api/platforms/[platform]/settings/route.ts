@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 const VALID_PLATFORMS = ['tiktok', 'instagram', 'youtube', 'x']
@@ -23,8 +23,8 @@ export async function PATCH(
   { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -54,7 +54,7 @@ export async function PATCH(
     const connection = await prisma.platformConnection.findUnique({
       where: {
         userId_platform: {
-          userId: session.user.id,
+          userId: userId,
           platform,
         },
       },
@@ -76,7 +76,7 @@ export async function PATCH(
     const updated = await prisma.platformConnection.update({
       where: {
         userId_platform: {
-          userId: session.user.id,
+          userId: userId,
           platform,
         },
       },

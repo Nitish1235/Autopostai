@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { Redis } from '@upstash/redis'
 
 const YOUTUBE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID ?? ''
@@ -19,8 +19,8 @@ const SCOPES = [
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -33,7 +33,7 @@ export async function GET() {
     const csrfToken = crypto.randomUUID() + crypto.randomUUID()
 
     // Store userId keyed by token, expire in 10 minutes
-    await redis.set(`youtube_oauth:${csrfToken}`, session.user.id, { ex: 600 })
+    await redis.set(`youtube_oauth:${csrfToken}`, userId, { ex: 600 })
 
     const params = new URLSearchParams({
       client_id: YOUTUBE_CLIENT_ID,

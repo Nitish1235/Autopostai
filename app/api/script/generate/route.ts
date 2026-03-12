@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { generateScript } from '@/lib/api/openai'
 import { checkCredits } from '@/lib/utils/credits'
 import { Redis } from '@upstash/redis'
@@ -24,16 +24,16 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Validate session
-    const session = await auth()
-    if (!session?.user?.id) {
+    // 1. Validate userId
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const userId = session.user.id
+
 
     // 2. Check credits
     const creditStatus = await checkCredits(userId)

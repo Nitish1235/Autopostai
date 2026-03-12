@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 // ── Schema ───────────────────────────────────────────
@@ -18,8 +18,8 @@ const BulkSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const videos = await prisma.video.findMany({
       where: {
         id: { in: videoIds },
-        userId: session.user.id,
+        userId: userId,
         status: { in: ['ready', 'scheduled'] },
       },
       select: { id: true },

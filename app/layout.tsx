@@ -80,7 +80,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}>
-        <ClerkProvider>
+        <ClerkProvider signInFallbackRedirectUrl="/dashboard" signUpFallbackRedirectUrl="/dashboard">
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"

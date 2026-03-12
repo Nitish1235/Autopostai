@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { enqueueJob } from '@/lib/queue/qstash'
 
@@ -20,8 +20,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -62,7 +62,7 @@ export async function POST(
       )
     }
 
-    if (video.userId !== session.user.id) {
+    if (video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
@@ -135,7 +135,7 @@ export async function POST(
 
     await enqueueJob('/jobs/publish', {
       videoId,
-      userId: session.user.id,
+      userId: userId,
       platforms: platformsToPublish,
     }, {
       deduplicationId: `publish-${videoId}-${Date.now()}`,

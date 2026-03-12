@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
 
@@ -16,8 +16,8 @@ const AddTopicSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') ?? undefined
 
     const where: Record<string, unknown> = {
-      userId: session.user.id,
+      userId: userId,
     }
     if (status) where.status = status
 
@@ -76,8 +76,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -92,12 +92,12 @@ export async function POST(request: Request) {
 
       // Delete all pending topics
       await prisma.topicQueue.deleteMany({
-        where: { userId: session.user.id, status: 'pending' },
+        where: { userId: userId, status: 'pending' },
       })
 
       // Get niche from config
       const config = await prisma.autopilotConfig.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: userId },
         select: { niche: true },
       })
 
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       await inngest.send({
         name: 'topics/generate',
         data: {
-          userId: session.user.id,
+          userId: userId,
           niche: config?.niche ?? 'finance',
           count: 7,
         },
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
 
     // Get max order
     const maxOrderResult = await prisma.topicQueue.findFirst({
-      where: { userId: session.user.id },
+      where: { userId: userId },
       orderBy: { order: 'desc' },
       select: { order: true },
     })
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     let niche = parsed.data.niche
     if (!niche) {
       const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: userId },
         select: { defaultNiche: true },
       })
       niche = user?.defaultNiche ?? 'general'
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
 
     const topic = await prisma.topicQueue.create({
       data: {
-        userId: session.user.id,
+        userId: userId,
         topic: parsed.data.topic,
         niche,
         order: nextOrder,
@@ -170,8 +170,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -194,7 +194,7 @@ export async function DELETE(request: Request) {
       select: { userId: true },
     })
 
-    if (!topic || topic.userId !== session.user.id) {
+    if (!topic || topic.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Topic not found' },
         { status: 404 }

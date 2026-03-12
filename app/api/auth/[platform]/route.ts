@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 
 const POSTFORME_OAUTH_URL = 'https://dash.postforme.dev/oauth'
 const POSTFORME_API_KEY = process.env.POSTFORME_API_KEY ?? ''
@@ -10,9 +10,9 @@ export async function GET(
     { params }: { params: Promise<{ platform: string }> }
 ) {
     try {
-        const session = await auth()
+        const { userId } = await auth()
 
-        if (!session?.user?.id) {
+        if (!userId) {
             return NextResponse.redirect(`${APP_URL}/login?error=unauthorized`)
         }
 
@@ -36,7 +36,7 @@ export async function GET(
         redirectUrl.searchParams.append('platform', platform)
 
         // Pass the user ID as 'state' so we know who is connecting when they return
-        redirectUrl.searchParams.append('state', session.user.id)
+        redirectUrl.searchParams.append('state', userId)
 
         // We assume the callback is handled centrally or via their webhook
         redirectUrl.searchParams.append('redirect_uri', `${APP_URL}/api/platforms/postforme/callback`)

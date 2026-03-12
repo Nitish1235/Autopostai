@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
 
@@ -10,8 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -26,7 +26,7 @@ export async function GET(
       select: { userId: true },
     })
 
-    if (!video || video.userId !== session.user.id) {
+    if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
@@ -52,7 +52,7 @@ export async function GET(
         .send({
           name: 'analytics/sync',
           data: {
-            userId: session.user.id,
+            userId: userId,
             videoId: id,
           },
         })

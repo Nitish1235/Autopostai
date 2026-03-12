@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 // ── Health Status Type ───────────────────────────────
@@ -10,8 +10,8 @@ type HealthStatus = 'healthy' | 'expiring' | 'expired' | 'disconnected' | 'throt
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     const connections = await prisma.platformConnection.findMany({
-      where: { userId: session.user.id },
+      where: { userId: userId },
     })
 
     const now = new Date()

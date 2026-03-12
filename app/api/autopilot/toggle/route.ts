@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
 
@@ -14,8 +14,8 @@ const ToggleSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -38,20 +38,20 @@ export async function POST(request: Request) {
 
     // Update config
     await prisma.autopilotConfig.upsert({
-      where: { userId: session.user.id },
-      create: { userId: session.user.id, enabled },
+      where: { userId: userId },
+      create: { userId: userId, enabled },
       update: { enabled },
     })
 
     // If enabling and queue is empty: trigger topic generation
     if (enabled) {
       const pendingCount = await prisma.topicQueue.count({
-        where: { userId: session.user.id, status: 'pending' },
+        where: { userId: userId, status: 'pending' },
       })
 
       if (pendingCount === 0) {
         const config = await prisma.autopilotConfig.findUnique({
-          where: { userId: session.user.id },
+          where: { userId: userId },
           select: { niche: true },
         })
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
           await inngest.send({
             name: 'topics/generate',
             data: {
-              userId: session.user.id,
+              userId: userId,
               niche: config?.niche ?? 'finance',
               count: 7,
             },

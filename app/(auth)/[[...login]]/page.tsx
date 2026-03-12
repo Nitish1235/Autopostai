@@ -118,6 +118,7 @@ export default function LoginPage() {
           <SignIn 
             routing="path" 
             path="/login" 
+            fallbackRedirectUrl="/dashboard"
             appearance={{
             elements: {
               rootBox: "w-full",

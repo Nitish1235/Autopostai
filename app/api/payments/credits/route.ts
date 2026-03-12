@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getPlanCreditLimit, getCreditHistory } from '@/lib/utils/credits'
 
@@ -7,8 +7,8 @@ import { getPlanCreditLimit, getCreditHistory } from '@/lib/utils/credits'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -16,7 +16,7 @@ export async function GET() {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         credits: true,
         creditsUsed: true,
@@ -48,7 +48,7 @@ export async function GET() {
     }
 
     // Fetch last 50 transactions
-    const transactions = await getCreditHistory(session.user.id, 50)
+    const transactions = await getCreditHistory(userId, 50)
 
     return NextResponse.json({
       success: true,

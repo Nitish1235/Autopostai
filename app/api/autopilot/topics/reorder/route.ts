@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 // ── Schema ───────────────────────────────────────────
@@ -13,8 +13,8 @@ const ReorderSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const topics = await prisma.topicQueue.findMany({
       where: {
         id: { in: orderedIds },
-        userId: session.user.id,
+        userId: userId,
       },
       select: { id: true },
     })

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 // ── Query Schema ─────────────────────────────────────
@@ -15,8 +15,8 @@ const QuerySchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const { startDate, endDate, platform } = parsed.data
 
     const where: Record<string, unknown> = {
-      userId: session.user.id,
+      userId: userId,
       scheduledAt: {
         gte: new Date(startDate),
         lte: new Date(endDate),

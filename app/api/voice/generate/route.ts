@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { generateVoiceAndUpload } from '@/lib/api/unrealSpeech'
 import type { ScriptSegment } from '@/types'
@@ -19,8 +19,8 @@ const VoiceSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       select: { userId: true, script: true },
     })
 
-    if (!video || video.userId !== session.user.id) {
+    if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       text: narration,
       voiceId,
       speed: voiceSpeed,
-      userId: session.user.id,
+      userId: userId,
       videoId,
       segmentIndex,
     })

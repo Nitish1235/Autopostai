@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 
@@ -9,8 +9,8 @@ const disconnectSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     await prisma.platformConnection.update({
       where: {
         userId_platform: {
-          userId: session.user.id,
+          userId: userId,
           platform,
         },
       },

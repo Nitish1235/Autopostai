@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth/authOptions'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { addCredits } from '@/lib/utils/credits'
 import { deleteFile, generateVideoKey, generateThumbnailKey } from '@/lib/gcs/storage'
@@ -40,8 +40,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -58,7 +58,7 @@ export async function GET(
       },
     })
 
-    if (!video || video.userId !== session.user.id) {
+    if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
@@ -93,8 +93,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -118,7 +118,7 @@ export async function PATCH(
       select: { userId: true, status: true },
     })
 
-    if (!video || video.userId !== session.user.id) {
+    if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
@@ -179,8 +179,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { userId } = await auth()
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -200,7 +200,7 @@ export async function DELETE(
       },
     })
 
-    if (!video || video.userId !== session.user.id) {
+    if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
@@ -215,7 +215,7 @@ export async function DELETE(
     }
 
     // Delete GCS files (fire and forget)
-    const userId = session.user.id
+
     const videoKey = generateVideoKey(userId, id)
     const thumbKey = generateThumbnailKey(userId, id)
 
@@ -257,7 +257,7 @@ export async function DELETE(
     const REFUNDABLE = ['pending', 'failed', 'generating_script', 'generating_images', 'generating_voice']
     if (REFUNDABLE.includes(video.status)) {
       await addCredits(
-        session.user.id,
+        userId,
         1,
         'refund',
         'Video deleted before completion — credit returned'
