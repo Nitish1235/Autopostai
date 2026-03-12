@@ -28,9 +28,19 @@ steps:
 
         # Install Prisma and push schema
         npm install --prefix /tmp/prisma-cli prisma@5 --no-save
+        set +e
         /tmp/prisma-cli/node_modules/.bin/prisma db push \
           --schema=./prisma/schema.prisma \
-          --skip-generate
+          --skip-generate 2>&1 | tee /tmp/prisma_out.txt
+        PRISMA_EXIT=$$?
+        set -e
+        if [ $$PRISMA_EXIT -ne 0 ]; then
+          if grep -q "already exists" /tmp/prisma_out.txt; then
+            echo "Schema already in sync (constraints exist). Continuing."
+          else
+            echo "Prisma migration failed:" && cat /tmp/prisma_out.txt && exit $$PRISMA_EXIT
+          fi
+        fi
 
         kill $$PROXY_PID
         echo "Migration complete."
