@@ -115,7 +115,10 @@ export default function LoginPage() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-[400px] flex items-center justify-center"
         >
-          <SignIn appearance={{
+          <SignIn 
+            routing="path" 
+            path="/login" 
+            appearance={{
             elements: {
               rootBox: "w-full",
               card: "bg-transparent shadow-none border border-[rgba(255,255,255,0.06)] rounded-xl",
