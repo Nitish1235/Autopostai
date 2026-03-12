@@ -1,5 +1,4 @@
 import { postToMultiplePlatforms } from '@/lib/api/postforme'
-import { uploadToYouTube } from '@/lib/api/youtube'
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
@@ -117,91 +116,54 @@ export async function handlePublishJob(data: PublishJob) {
 
     await Promise.all(captionPromises)
 
-    // 8. Separate YouTube from other platforms
-    const youtubeSelected = platformsToPublish.includes('youtube')
-    const otherPlatforms = platformsToPublish.filter((p) => p !== 'youtube')
+    // 8. Publish ALL platforms (tiktok, instagram, youtube, x) via PostForMe
     const successfulPlatforms: string[] = []
     const failedPlatforms: string[] = []
 
-    // 9. Publish to TikTok, Instagram, X via PostForMe
-    if (otherPlatforms.length > 0) {
-      const connectedPlatforms = otherPlatforms
-        .map((platform) => {
-          const conn = connections.find((c) => c.platform === platform)
-          if (!conn?.accessToken) {
-            failedPlatforms.push(platform)
-            return null
-          }
-          return {
-            platform: platform as string,
-            accessToken: conn.accessToken,
-          }
+    const connectedPlatforms = platformsToPublish
+      .map((platform) => {
+        const conn = connections.find((c) => c.platform === platform)
+        if (!conn?.accessToken) {
+          failedPlatforms.push(platform)
+          return null
+        }
+        return {
+          platform: platform as string,
+          accessToken: conn.accessToken,
+        }
+      })
+      .filter(
+        (p): p is { platform: string; accessToken: string } =>
+          p !== null
+      )
+
+    if (connectedPlatforms.length > 0) {
+      const defaultPlatform = connectedPlatforms[0].platform
+      const defaultCaption =
+        captionMap[defaultPlatform] ?? captionMap[platformsToPublish[0]]
+
+      try {
+        const postForMeResults = await postToMultiplePlatforms({
+          platforms: connectedPlatforms,
+          videoUrl: video.videoUrl,
+          caption: defaultCaption?.caption ?? video.title,
+          hashtags: defaultCaption?.hashtags ?? [],
+          thumbnailUrl: video.thumbnailUrl ?? undefined,
         })
-        .filter(
-          (p): p is { platform: string; accessToken: string } =>
-            p !== null
-        )
 
-      if (connectedPlatforms.length > 0) {
-        const defaultPlatform = connectedPlatforms[0].platform
-        const defaultCaption =
-          captionMap[defaultPlatform] ?? captionMap[otherPlatforms[0]]
+        for (const result of postForMeResults) {
+          successfulPlatforms.push(result.platform)
+        }
 
-        try {
-          const postForMeResults = await postToMultiplePlatforms({
-            platforms: connectedPlatforms,
-            videoUrl: video.videoUrl,
-            caption: defaultCaption?.caption ?? video.title,
-            hashtags: defaultCaption?.hashtags ?? [],
-            thumbnailUrl: video.thumbnailUrl ?? undefined,
-          })
-
-          for (const result of postForMeResults) {
-            successfulPlatforms.push(result.platform)
-          }
-
-          for (const cp of connectedPlatforms) {
-            if (!successfulPlatforms.includes(cp.platform)) {
-              failedPlatforms.push(cp.platform)
-            }
-          }
-        } catch {
-          for (const cp of connectedPlatforms) {
+        for (const cp of connectedPlatforms) {
+          if (!successfulPlatforms.includes(cp.platform)) {
             failedPlatforms.push(cp.platform)
           }
         }
-      }
-    }
-
-    // 10. Publish to YouTube
-    if (youtubeSelected) {
-      const ytConnection = connections.find((c) => c.platform === 'youtube')
-      if (ytConnection?.accessToken) {
-        try {
-          const ytCaption = captionMap['youtube'] ?? {
-            caption: video.title,
-            hashtags: [],
-          }
-
-          await uploadToYouTube({
-            accessToken: ytConnection.accessToken,
-            videoUrl: video.videoUrl,
-            title: video.title,
-            description: ytCaption.caption,
-            tags: ytCaption.hashtags,
-            thumbnailUrl: video.thumbnailUrl ?? undefined,
-          })
-
-          successfulPlatforms.push('youtube')
-        } catch (ytError) {
-          console.error(
-            `[publishWorker] YouTube publish failed for ${videoId}:`,
-            ytError
-          )
-          failedPlatforms.push('youtube')
+      } catch {
+        for (const cp of connectedPlatforms) {
+          failedPlatforms.push(cp.platform)
         }
-      } else {
-        failedPlatforms.push('youtube')
       }
     }
 

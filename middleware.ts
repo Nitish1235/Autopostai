@@ -71,6 +71,7 @@ const isPublicRoute = createRouteMatcher([
     '/api/admin(.*)',
     '/api/webhooks(.*)',
     '/api/inngest(.*)',
+    '/api/platforms/postforme/callback',
     '/policy',
     '/terms-service',
     '/sitemap.xml',

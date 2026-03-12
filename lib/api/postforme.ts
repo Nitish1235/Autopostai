@@ -2,7 +2,7 @@
 
 import axios from 'axios'
 
-const BASE_URL = 'https://api.postforme.dev/v1'
+const BASE_URL = 'https://app.postforme.dev/api/v1'
 // Note: We'll retrieve this from env, but let it fail gracefully if undefined early on
 // while the user is setting up their account
 const API_KEY = process.env.POSTFORME_API_KEY || ''
@@ -64,7 +64,7 @@ async function postForMeFetch<T>(
 // ── Connect Account ──────────────────────────────────
 
 export async function connectAccount(params: {
-    platform: 'tiktok' | 'instagram' | 'x' | string
+    platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
     accessToken: string
     refreshToken?: string
 }): Promise<PostForMeAccountInfo> {
@@ -80,7 +80,7 @@ export async function connectAccount(params: {
 // ── Post Video ───────────────────────────────────────
 
 export async function postVideo(params: {
-    platform: 'tiktok' | 'instagram' | 'x' | string
+    platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
     accessToken: string
     accountId?: string // Ideally PostForMe uses account IDs
     videoUrl: string
@@ -111,7 +111,7 @@ export async function postVideo(params: {
 
 export async function postToMultiplePlatforms(params: {
     platforms: Array<{
-        platform: 'tiktok' | 'instagram' | 'x' | string
+        platform: 'tiktok' | 'instagram' | 'youtube' | 'x' | string
         accessToken: string
     }>
     videoUrl: string

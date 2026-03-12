@@ -3,8 +3,6 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
 import { getPostAnalytics } from '@/lib/api/postforme'
-import { getVideoAnalytics as getYouTubeVideoAnalytics } from '@/lib/api/youtube'
-import { getChannelInfo } from '@/lib/api/youtube'
 
 // ── Analytics Poll Function ──────────────────────────
 
@@ -88,35 +86,19 @@ export const analyticsPoll = inngest.createFunction(
             if (!connection?.accessToken) continue
 
             try {
-              if (platform === 'youtube') {
-                // YouTube analytics
-                const ytAnalytics = await getYouTubeVideoAnalytics({
-                  accessToken: connection.accessToken,
-                  videoId: video.id,
-                })
+              // All platforms (tiktok, instagram, youtube, x) via PostForMe
+              const postForMeAnalytics = await getPostAnalytics({
+                platform,
+                postId: video.id,
+                accessToken: connection.accessToken,
+              })
 
-                platformBreakdown[platform] = {
-                  views: ytAnalytics.views,
-                  likes: ytAnalytics.likes,
-                  shares: 0,
-                  comments: ytAnalytics.comments,
-                  watchRate: 0,
-                }
-              } else {
-                // TikTok, Instagram, X via PostForMe
-                const postForMeAnalytics = await getPostAnalytics({
-                  platform,
-                  postId: video.id,
-                  accessToken: connection.accessToken,
-                })
-
-                platformBreakdown[platform] = {
-                  views: postForMeAnalytics.views,
-                  likes: postForMeAnalytics.likes,
-                  shares: postForMeAnalytics.shares,
-                  comments: postForMeAnalytics.comments,
-                  watchRate: postForMeAnalytics.watchRate,
-                }
+              platformBreakdown[platform] = {
+                views: postForMeAnalytics.views,
+                likes: postForMeAnalytics.likes,
+                shares: postForMeAnalytics.shares,
+                comments: postForMeAnalytics.comments,
+                watchRate: postForMeAnalytics.watchRate,
               }
             } catch (platError) {
               console.error(
@@ -229,10 +211,11 @@ export const analyticsPoll = inngest.createFunction(
             let newCount = 0
 
             if (conn.platform === 'youtube') {
-              const channelInfo = await getChannelInfo(conn.accessToken)
-              newCount = channelInfo.subscriberCount
+              // YouTube follower counts via PostForMe API
+              // PostForMe handles this when the account is connected
+              continue
             }
-            // TikTok, Instagram, X follower counts could be fetched
+            // TikTok, Instagram, X follower counts
             // via PostForMe API if supported — skip for now
             else {
               continue
