@@ -3,17 +3,37 @@
 
 steps:
   # ── Step 0: Run Prisma migrations ────────────────────
-  # Pushes schema to Cloud SQL before deploying new images.
-  # Only _DATABASE_URL needs to be set in the Cloud Build trigger.
-  # DIRECT_URL = DATABASE_URL because Cloud SQL has no pgbouncer pooler.
+  # Downloads the Cloud SQL Auth Proxy, starts it in the background to
+  # create the unix socket, then runs `prisma db push` to sync the schema.
+  # Cloud Build's service account must have `roles/cloudsql.client` IAM role.
   - name: 'node:20'
-    entrypoint: 'sh'
+    entrypoint: 'bash'
     args:
       - '-c'
       - |
-        apt-get update -y && apt-get install -y openssl
+        set -e
+        apt-get update -y && apt-get install -y openssl wget
+
+        # Download Cloud SQL Auth Proxy v2
+        wget -q https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.1/cloud-sql-proxy.linux.amd64 \
+          -O /usr/local/bin/cloud-sql-proxy
+        chmod +x /usr/local/bin/cloud-sql-proxy
+
+        # Create socket directory and start proxy in background
+        mkdir -p /cloudsql
+        /usr/local/bin/cloud-sql-proxy --unix-socket /cloudsql ${_CLOUDSQL_INSTANCE} &
+        PROXY_PID=$!
+        echo "Cloud SQL Proxy started (PID $PROXY_PID), waiting for socket..."
+        sleep 5
+
+        # Install Prisma and push schema
         npm install --prefix /tmp/prisma-cli prisma@5 --no-save
-        /tmp/prisma-cli/node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --skip-generate
+        /tmp/prisma-cli/node_modules/.bin/prisma db push \
+          --schema=./prisma/schema.prisma \
+          --skip-generate
+
+        kill $PROXY_PID
+        echo "Migration complete."
     env:
       - 'DATABASE_URL=${_DATABASE_URL}'
       - 'DIRECT_URL=${_DATABASE_URL}'
@@ -84,6 +104,8 @@ steps:
       - '--timeout'
       - '300'
       - '--allow-unauthenticated'
+      - '--set-cloudsql-instances'
+      - '${_CLOUDSQL_INSTANCE}'
 
   # ── Step 6: Deploy worker to Cloud Run ───────────────
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -109,13 +131,16 @@ steps:
       - '--timeout'
       - '600'
       - '--no-allow-unauthenticated'
+      - '--set-cloudsql-instances'
+      - '${_CLOUDSQL_INSTANCE}'
 
-# Substitution variables — set these in Cloud Build trigger config
-# IMPORTANT: Set _DATABASE_URL in the trigger UI, never commit credentials here!
+# Substitution variables — set these in the Cloud Build trigger UI.
+# NEVER commit real values here.
 substitutions:
   _REGION: us-central1
   _REPO: autopost-ai
-  _DATABASE_URL: ''     # Set in Cloud Build trigger → Add substitution
+  _CLOUDSQL_INSTANCE: ''  # e.g. autopostai-489407:us-central1:autopost-db
+  _DATABASE_URL: ''       # postgresql://user:pass@/dbname?host=/cloudsql/project:region:instance
   _NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''  # Clerk frontend key
 
 # Push images to Artifact Registry
