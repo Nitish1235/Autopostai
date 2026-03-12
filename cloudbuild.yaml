@@ -6,6 +6,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}'
       - '-f'
       - 'docker/Dockerfile'
       - '-t'
@@ -101,6 +103,7 @@ substitutions:
   _REGION: us-central1
   _REPO: autopost-ai
   _CLOUDSQL_INSTANCE: ''  # project:region:instance-name
+  _NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''  # Clerk frontend key
 
 # Push images to Artifact Registry
 images:
