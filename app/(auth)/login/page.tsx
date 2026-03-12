@@ -115,10 +115,9 @@ export default function LoginPage() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-[400px] flex items-center justify-center"
         >
-          <SignIn 
-            routing="path" 
-            path="/login" 
+          <SignIn
             fallbackRedirectUrl="/dashboard"
+            signUpFallbackRedirectUrl="/dashboard"
             appearance={{
             elements: {
               rootBox: "w-full",

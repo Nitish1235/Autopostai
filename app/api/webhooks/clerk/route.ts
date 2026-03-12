@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       // Create user in our DB
       const user = await prisma.user.create({
         data: {
+          id: id,
           clerkId: id,
           email: email,
           name: `${first_name || ''} ${last_name || ''}`.trim() || email.split('@')[0],

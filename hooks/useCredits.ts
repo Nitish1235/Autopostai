@@ -18,6 +18,8 @@ interface UseCreditsReturn {
 
 function getPlanLimit(plan: string): number {
   switch (plan) {
+    case 'free':
+      return PLANS.free.credits
     case 'starter':
       return PLANS.starter.credits
     case 'pro':
@@ -25,7 +27,7 @@ function getPlanLimit(plan: string): number {
     case 'creator_max':
       return PLANS.creator_max.credits
     default:
-      return 0
+      return 1
   }
 }
 
@@ -37,8 +39,8 @@ export function useCredits(): UseCreditsReturn {
       return {
         credits: 0,
         creditsUsed: 0,
-        plan: 'starter',
-        planLimit: 30,
+        plan: 'free',
+        planLimit: 1,
         percentUsed: 0,
         isLow: false,
         isEmpty: true,

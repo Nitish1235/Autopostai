@@ -8,6 +8,19 @@ import type {
 } from '@/types'
 
 export const PLANS = {
+  free: {
+    id: 'free' as const,
+    name: 'Free Trial',
+    price: 0,
+    credits: 1,
+    aiVideoCredits: 0,
+    postsPerDay: 1,
+    features: [
+      '1 free trial video',
+      'Test out the generation process',
+      'Limited voice & style options',
+    ],
+  },
   starter: {
     id: 'starter' as const,
     name: 'Starter',

@@ -45,12 +45,12 @@ const PLAN_INFO: Record<
   { label: string; color: string; credits: number }
 > = {
   free: { label: 'Free', color: 'var(--text-secondary)', credits: 1 },
-  starter: { label: 'Starter', color: 'var(--text-secondary)', credits: 10 },
-  pro: { label: 'Pro', color: 'var(--accent)', credits: 50 },
+  starter: { label: 'Starter', color: 'var(--text-secondary)', credits: 30 },
+  pro: { label: 'Pro', color: 'var(--accent)', credits: 100 },
   creator_max: {
     label: 'Creator Max',
     color: 'var(--success)',
-    credits: 200,
+    credits: 300,
   },
 }
 
@@ -217,7 +217,7 @@ export default function SettingsPage() {
     )
   }
 
-  const plan = user?.plan ?? 'starter'
+  const plan = user?.plan ?? 'free'
   const planInfo = PLAN_INFO[plan]
   const creditPercentage = user
     ? Math.round((user.creditsUsed / user.credits) * 100)
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                     </Badge>
                   </div>
                   <p className="text-[12px] text-[var(--text-secondary)]">
-                    {user?.credits} credits / month
+                    {user?.credits ?? planInfo.credits} credits / month
                   </p>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                     Credit Usage
                   </span>
                   <span className="text-[12px] font-medium text-[var(--text-primary)] tabular-nums">
-                    {user?.creditsUsed ?? 0} / {user?.credits ?? 0}
+                    {user?.creditsUsed ?? 0} / {user?.credits ?? planInfo.credits}
                   </span>
                 </div>
                 <Progress
@@ -396,7 +396,9 @@ export default function SettingsPage() {
                     Plan,
                     (typeof PLAN_INFO)[Plan],
                   ][]
-                ).map(([planId, info]) => (
+                )
+                .filter(([planId]) => planId !== 'free')
+                .map(([planId, info]) => (
                   <div
                     key={planId}
                     className={cn(

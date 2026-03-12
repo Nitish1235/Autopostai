@@ -42,9 +42,19 @@ export default function PlatformsPage() {
     fetchPlatforms()
   }
 
-  const handleConnect = (platform: Platform) => {
-    // Redirect to OAuth flow
-    window.location.href = `/api/auth/${platform}`
+  const handleConnect = async (platform: Platform) => {
+    try {
+      const res = await fetch(`/api/auth/${platform}`)
+      const data = await res.json()
+      
+      if (data.success && data.data?.authUrl) {
+        window.location.href = data.data.authUrl
+      } else {
+        toast({ message: data.error || 'Failed to initiate connection', type: 'error' })
+      }
+    } catch {
+      toast({ message: 'Network error while connecting', type: 'error' })
+    }
   }
 
   const handleDisconnect = async (platform: Platform) => {

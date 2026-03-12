@@ -8,7 +8,7 @@ const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY ?? ''
 
 // ── POST — Open Billing Portal ───────────────────────
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ADMIN_COOKIE } from '@/lib/admin/auth'
 
-export async function POST() {
+export async function POST(req: Request) {
     const response = NextResponse.json({ success: true })
     response.cookies.set(ADMIN_COOKIE, '', {
         httpOnly: true,

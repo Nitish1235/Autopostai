@@ -8,7 +8,7 @@ import { generatePreviewAudio } from '@/lib/api/unrealSpeech'
 // Cached in GCS. First call may be slow as it generates
 // missing previews on-demand.
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const previews: Array<{
       voiceId: string

@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 // ── GET — Fetch current user ──────────────────────────
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {

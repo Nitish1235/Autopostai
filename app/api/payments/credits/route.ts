@@ -5,7 +5,7 @@ import { getPlanCreditLimit, getCreditHistory } from '@/lib/utils/credits'
 
 // ── GET — Credit Info + History ──────────────────────
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {

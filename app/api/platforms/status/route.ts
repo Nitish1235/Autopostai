@@ -8,7 +8,7 @@ type HealthStatus = 'healthy' | 'expiring' | 'expired' | 'disconnected' | 'throt
 
 // ── GET — All Platform Connection Statuses ───────────
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {

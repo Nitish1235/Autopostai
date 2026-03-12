@@ -32,7 +32,7 @@ const UpdateSchema = z.object({
 
 // ── GET — Get Autopilot Config ───────────────────────
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {
