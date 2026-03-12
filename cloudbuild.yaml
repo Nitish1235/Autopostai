@@ -2,6 +2,21 @@
 # Trigger this from Cloud Build console → Connect Repository → main branch
 
 steps:
+  # ── Step 0: Run Prisma migrations ────────────────────
+  # Pushes schema to Cloud SQL before deploying new images.
+  # DATABASE_URL and DIRECT_URL are set in the Cloud Build trigger
+  # substitutions (never commit real credentials to this file).
+  - name: 'node:20-slim'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npm install --prefix /tmp/prisma-cli prisma@5 --no-save
+        /tmp/prisma-cli/node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --skip-generate
+    env:
+      - 'DATABASE_URL=${_DATABASE_URL}'
+      - 'DIRECT_URL=${_DIRECT_URL}'
+
   # ── Step 1: Build the Next.js web app image ──────────
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -68,8 +83,6 @@ steps:
       - '--timeout'
       - '300'
       - '--allow-unauthenticated'
-      - '--set-cloudsql-instances'
-      - '${_CLOUDSQL_INSTANCE}'
 
   # ── Step 6: Deploy worker to Cloud Run ───────────────
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -95,14 +108,14 @@ steps:
       - '--timeout'
       - '600'
       - '--no-allow-unauthenticated'
-      - '--set-cloudsql-instances'
-      - '${_CLOUDSQL_INSTANCE}'
 
 # Substitution variables — set these in Cloud Build trigger config
+# IMPORTANT: Set _DATABASE_URL and _DIRECT_URL in the trigger UI, not here!
 substitutions:
   _REGION: us-central1
   _REPO: autopost-ai
-  _CLOUDSQL_INSTANCE: ''  # project:region:instance-name
+  _DATABASE_URL: ''     # Set in Cloud Build trigger → Add substitution
+  _DIRECT_URL: ''       # Set in Cloud Build trigger → Add substitution
   _NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''  # Clerk frontend key
 
 # Push images to Artifact Registry
