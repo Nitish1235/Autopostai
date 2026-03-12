@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 
-const POSTFORME_OAUTH_URL = 'https://dash.postforme.dev/oauth'
+const POSTFORME_OAUTH_URL = 'https://app.postforme.dev/oauth'
 const POSTFORME_API_KEY = process.env.POSTFORME_API_KEY ?? ''
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
