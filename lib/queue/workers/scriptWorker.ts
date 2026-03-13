@@ -22,6 +22,7 @@ export async function handleScriptJob(data: ScriptJob) {
     imageStyle,
     voiceId,
     voiceSpeed,
+    prebuiltScript,
   } = data
 
   console.log(`[scriptWorker] Starting script generation for ${videoId}`)
@@ -37,17 +38,41 @@ export async function handleScriptJob(data: ScriptJob) {
       data: { stage: 'script', progress: 5, startedAt: new Date() },
     })
 
-    // 2. Generate script via GPT-4o
-    const result = await generateScript({ topic, niche, format })
+    // 2. Use prebuilt script from wizard if provided, otherwise generate via GPT-4o
+    let scriptSegments: Array<{
+      id: string
+      order: number
+      narration: string
+      imagePrompt: string
+      estimatedDuration?: number
+    }>
+    let title: string
+
+    if (prebuiltScript && prebuiltScript.length > 0) {
+      console.log(`[scriptWorker] Using prebuilt script (${prebuiltScript.length} segments) for ${videoId}`)
+      scriptSegments = prebuiltScript.map((seg, i) => ({
+        id: seg.id ?? `seg_${String(i + 1).padStart(3, '0')}`,
+        order: seg.order ?? i + 1,
+        narration: seg.narration,
+        imagePrompt: seg.imagePrompt,
+        estimatedDuration: seg.duration ?? 3.5,
+      }))
+      title = topic.slice(0, 60)
+    } else {
+      console.log(`[scriptWorker] Generating script via OpenAI for ${videoId}`)
+      const result = await generateScript({ topic, niche, format })
+      scriptSegments = result.segments
+      title = result.title
+    }
 
     // 3. Update video with script
     await prisma.video.update({
       where: { id: videoId },
       data: {
-        title: result.title,
-        script: result.segments as any,
+        title,
+        script: scriptSegments as any,
         status: 'generating_images',
-        imageUrls: new Array(result.segments.length).fill(''),
+        imageUrls: new Array(scriptSegments.length).fill(''),
       },
     })
 
@@ -61,8 +86,8 @@ export async function handleScriptJob(data: ScriptJob) {
     const seed = Math.floor(Math.random() * 2147483647)
 
     // 6. Queue image generation jobs via QStash
-    for (let index = 0; index < result.segments.length; index++) {
-      const segment = result.segments[index]
+    for (let index = 0; index < scriptSegments.length; index++) {
+      const segment = scriptSegments[index]
 
       const fullPositivePrompt = buildImagePrompt(
         segment.imagePrompt,
@@ -84,7 +109,7 @@ export async function handleScriptJob(data: ScriptJob) {
         imageStyle,
         seed: seed + index,
         model: getModelForStyle(imageStyle),
-        totalSegments: result.segments.length,
+        totalSegments: scriptSegments.length,
       }
 
       await enqueueJob('/jobs/image', imageJobData as unknown as Record<string, unknown>, {
@@ -93,8 +118,8 @@ export async function handleScriptJob(data: ScriptJob) {
     }
 
     // 7. Queue voice generation jobs via QStash
-    for (let index = 0; index < result.segments.length; index++) {
-      const segment = result.segments[index]
+    for (let index = 0; index < scriptSegments.length; index++) {
+      const segment = scriptSegments[index]
 
       const voiceJobData: VoiceJob = {
         videoId,
@@ -103,7 +128,7 @@ export async function handleScriptJob(data: ScriptJob) {
         narration: segment.narration,
         voiceId,
         voiceSpeed,
-        totalSegments: result.segments.length,
+        totalSegments: scriptSegments.length,
       }
 
       await enqueueJob('/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
@@ -112,10 +137,10 @@ export async function handleScriptJob(data: ScriptJob) {
     }
 
     console.log(
-      `[scriptWorker] Script done. Queued ${result.segments.length} image + voice jobs.`
+      `[scriptWorker] Script done. Queued ${scriptSegments.length} image + voice jobs.`
     )
 
-    return { success: true, segmentCount: result.segments.length }
+    return { success: true, segmentCount: scriptSegments.length }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown error'

@@ -69,12 +69,16 @@ export async function generateVoice(params: {
   pitch?: number
 }): Promise<VoiceGenerationResult> {
   const cleanedText = cleanTextForTTS(params.text)
-  // IMPORTANT: voiceId must be one of: Dan, Will, Scarlett, Liv, Amy
-  const voiceId = params.voiceId
+
+  // Map internal alias (ryan, sarah...) → UnrealSpeech canonical name (Dan, Scarlett...)
+  const unrealVoiceId = VOICE_MAP[params.voiceId] ?? params.voiceId
+  if (!VOICE_MAP[params.voiceId]) {
+    console.warn(`[unrealSpeech] VoiceId '${params.voiceId}' not found in VOICE_MAP — using as-is. Valid keys: ${Object.keys(VOICE_MAP).join(', ')}`)
+  }
 
   const requestBody = {
     Text: cleanedText,
-    VoiceId: voiceId,
+    VoiceId: unrealVoiceId,
     Bitrate: '192k',
     Speed: toUnrealSpeed(params.speed ?? 1.0),
     Pitch: params.pitch ?? 1.0,

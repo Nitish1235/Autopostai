@@ -173,29 +173,58 @@ function CreateWizard() {
 
       const data = await res.json()
       if (data.success && data.data?.videoId) {
-        setVideoId(data.data.videoId)
+        const newVideoId = data.data.videoId
+        setVideoId(newVideoId)
         toast({ message: 'Video creation started!', type: 'success' })
 
-        // Simulate progress polling
-        let progress = 10
-        const labels = isAiVideo
-          ? ['Submitting to Sora 2...', 'Generating AI video...', 'Processing...', 'Finalizing...']
-          : ['Generating images...', 'Generating voice...', 'Rendering video...', 'Finalizing...']
-        const interval = setInterval(() => {
-          progress += Math.random() * (isAiVideo ? 8 : 15)
-          if (progress >= 100) {
-            progress = 100
-            clearInterval(interval)
-            setIsGenerating(false)
-            setGenerationStage('Complete!')
-          }
-          setGenerationProgress(Math.min(progress, 100))
+        // Poll real video status every 3 seconds
+        const STAGE_LABELS: Record<string, string> = {
+          script: 'Generating script...',
+          images: 'Generating images...',
+          voice: 'Generating voice...',
+          render: 'Rendering video...',
+          upload: 'Uploading...',
+          ai_generate: 'Generating AI video...',
+        }
 
-          if (progress < 25) setGenerationStage(labels[0])
-          else if (progress < 50) setGenerationStage(labels[1])
-          else if (progress < 75) setGenerationStage(labels[2])
-          else if (progress < 100) setGenerationStage(labels[3])
-        }, 2000)
+        const poll = setInterval(async () => {
+          try {
+            const statusRes = await fetch(`/api/video/${newVideoId}/status`)
+            const statusData = await statusRes.json()
+
+            if (!statusData.success) {
+              clearInterval(poll)
+              setIsGenerating(false)
+              toast({ message: statusData.error || 'Video generation failed', type: 'error' })
+              return
+            }
+
+            const { status, stage, progress, videoUrl: vUrl, thumbnailUrl: tUrl, error } = statusData.data
+
+            if (progress >= 0) {
+              setGenerationProgress(progress)
+            }
+            if (stage && STAGE_LABELS[stage]) {
+              setGenerationStage(STAGE_LABELS[stage])
+            }
+
+            if (status === 'ready' || status === 'scheduled' || status === 'posted') {
+              clearInterval(poll)
+              setGenerationProgress(100)
+              setGenerationStage('Complete!')
+              setIsGenerating(false)
+              if (vUrl) setVideoUrl(vUrl)
+              if (tUrl) setThumbnailUrl(tUrl)
+              toast({ message: '🎬 Your video is ready!', type: 'success' })
+            } else if (status === 'failed') {
+              clearInterval(poll)
+              setIsGenerating(false)
+              toast({ message: error || 'Video generation failed. Credit refunded.', type: 'error' })
+            }
+          } catch {
+            // Network error during poll — keep trying
+          }
+        }, 3000)
       } else {
         toast({
           message: data.error || 'Failed to create video',
