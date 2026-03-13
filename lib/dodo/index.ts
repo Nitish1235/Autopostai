@@ -15,6 +15,8 @@ async function dodoFetch<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`
 
+  console.log(`[dodo] ${method} ${url}`, body ? JSON.stringify(body) : '')
+
   const headers: Record<string, string> = {
     Authorization: `Bearer ${API_KEY}`,
     'Content-Type': 'application/json',
@@ -33,6 +35,7 @@ async function dodoFetch<T>(
 
   if (!response.ok) {
     const errorBody = await response.text()
+    console.error(`[dodo] Error ${response.status} ${method} ${endpoint}:`, errorBody)
     throw new Error(
       `Dodo API error [${response.status}] ${method} ${endpoint}: ${errorBody}`
     )
@@ -42,7 +45,9 @@ async function dodoFetch<T>(
     return {} as T
   }
 
-  return response.json() as Promise<T>
+  const result = await response.json() as T
+  console.log(`[dodo] Response ${method} ${endpoint}:`, JSON.stringify(result))
+  return result
 }
 
 // ── Create Customer ───────────────────────────────────
@@ -50,11 +55,12 @@ export async function createCustomer(
   email: string,
   name: string
 ): Promise<{ customerId: string }> {
-  const result = await dodoFetch<{ id: string }>('/customers', 'POST', {
+  // SDK: Client returns Customer { customer_id, email, name, ... }
+  const result = await dodoFetch<{ customer_id: string }>('/customers', 'POST', {
     email,
     name,
   })
-  return { customerId: result.id }
+  return { customerId: result.customer_id }
 }
 
 // ── Create Subscription ──────────────────────────────
@@ -85,29 +91,33 @@ export async function createSubscription(
 }
 
 // ── Cancel Subscription ──────────────────────────────
+// SDK: client.subscriptions.update(id, { ... }) → PATCH /subscriptions/:id
 export async function cancelSubscription(
   subscriptionId: string
 ): Promise<void> {
-  await dodoFetch(`/subscriptions/${subscriptionId}`, 'DELETE')
+  await dodoFetch(`/subscriptions/${subscriptionId}`, 'PATCH', {
+    cancel_at_next_billing_date: true,
+  })
 }
 
 // ── Get Subscription ─────────────────────────────────
+// SDK: Subscription { subscription_id, product_id, status, next_billing_date, ... }
 export async function getSubscription(
   subscriptionId: string
 ): Promise<{
   status: string
-  planId: string
-  currentPeriodEnd: string
+  productId: string
+  nextBillingDate: string
 }> {
   const result = await dodoFetch<{
     status: string
-    plan_id: string
-    current_period_end: string
+    product_id: string
+    next_billing_date: string
   }>(`/subscriptions/${subscriptionId}`, 'GET')
   return {
     status: result.status,
-    planId: result.plan_id,
-    currentPeriodEnd: result.current_period_end,
+    productId: result.product_id,
+    nextBillingDate: result.next_billing_date,
   }
 }
 
