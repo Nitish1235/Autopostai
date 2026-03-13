@@ -24,7 +24,6 @@ interface WordTimestampRaw {
 }
 
 interface VoiceGenerationResult {
-  audioUrl: string
   audioBuffer: Buffer
   words: WordTimestampRaw[]
   duration: number
@@ -52,6 +51,15 @@ export function cleanTextForTTS(text: string): string {
   return cleaned
 }
 
+// ── Convert user voiceSpeed (1.0=normal) to UnrealSpeech Speed param ─────
+// UnrealSpeech: Speed 0=normal, -1=slowest, 0.5=fastest
+// User UI:      speed 1.0=normal, 0.75=slower, 1.5=faster
+// Formula: unrealSpeed = (userSpeed - 1.0) * 1.0  (linear, capped to -1..0.5)
+function toUnrealSpeed(userSpeed: number): number {
+  const converted = userSpeed - 1.0  // 0.75 → -0.25, 1.0 → 0, 1.5 → 0.5
+  return Math.max(-1, Math.min(0.5, converted))
+}
+
 // ── Generate Voice ───────────────────────────────────
 
 export async function generateVoice(params: {
@@ -60,103 +68,114 @@ export async function generateVoice(params: {
   speed?: number
   pitch?: number
 }): Promise<VoiceGenerationResult> {
-  const mappedVoice = params.voiceId // v8 uses the exact names
   const cleanedText = cleanTextForTTS(params.text)
+  // IMPORTANT: voiceId must be one of: Dan, Will, Scarlett, Liv, Amy
+  const voiceId = params.voiceId
 
   const requestBody = {
     Text: cleanedText,
-    VoiceId: mappedVoice,
+    VoiceId: voiceId,
     Bitrate: '192k',
-    Speed: params.speed ?? 0,
+    Speed: toUnrealSpeed(params.speed ?? 1.0),
     Pitch: params.pitch ?? 1.0,
+    // TimestampType supported on /speech but NOT on /stream
     TimestampType: 'word',
   }
 
-  // Generate audio stream
-  let audioBuffer: Buffer
+  // FIX: Use /speech endpoint — returns OutputUri (MP3) + TimestampsUri (JSON)
+  // The /stream endpoint does NOT support TimestampType per API docs.
+  interface SpeechResponse {
+    OutputUri: string
+    TimestampsUri: string
+    PhonemeTimestampsUri?: string
+    CreationTime?: string
+    RequestCharacters?: number
+    VoiceId?: string
+  }
+
+  let speechData: SpeechResponse
   try {
-    const audioResponse = await axios.post(
-      `${BASE_URL}/stream`,
+    const speechResponse = await axios.post<SpeechResponse>(
+      `${BASE_URL}/speech`,
       requestBody,
       {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
         },
-        responseType: 'arraybuffer',
         timeout: 30000,
       }
     )
-    audioBuffer = Buffer.from(audioResponse.data)
+    speechData = speechResponse.data
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        throw new Error('Unreal Speech authentication failed')
+        throw new Error('Unreal Speech authentication failed. Check UNREAL_SPEECH_API_KEY.')
+      }
+      if (error.response?.status === 400) {
+        throw new Error(
+          `Unreal Speech bad request: ${JSON.stringify(error.response.data)}. ` +
+          `Ensure VoiceId is a valid V8 voice (e.g. Autumn, Noah, Jasper, Scarlett, Melody...)`
+        )
       }
       if (error.response?.status === 429) {
         throw new Error('Unreal Speech rate limit exceeded')
       }
       throw new Error(
-        `Voice generation failed: ${error.response?.status ?? 'unknown'}`
+        `Voice generation failed: ${error.response?.status ?? 'unknown'} — ${JSON.stringify(error.response?.data ?? {})}`
       )
     }
     throw error
   }
 
-  // Get word-level timestamps
-  let words: WordTimestampRaw[] = []
+  // Download audio binary from the returned URL
+  let audioBuffer: Buffer
   try {
-    const timestampResponse = await axios.post(
-      `${BASE_URL}/timestamps`,
-      requestBody,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000,
-      }
-    )
-
-    const timestampData = timestampResponse.data
-    if (Array.isArray(timestampData)) {
-      words = timestampData.map(
-        (item: { word: string; start: number; end: number }) => ({
-          word: item.word,
-          start: item.start,
-          end: item.end,
-        })
-      )
-    } else if (
-      timestampData &&
-      typeof timestampData === 'object' &&
-      Array.isArray(timestampData.words)
-    ) {
-      words = timestampData.words.map(
-        (item: { word: string; start: number; end: number }) => ({
-          word: item.word,
-          start: item.start,
-          end: item.end,
-        })
-      )
-    }
+    const audioDownload = await axios.get(speechData.OutputUri, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    })
+    audioBuffer = Buffer.from(audioDownload.data)
   } catch {
-    // Timestamps are non-critical; continue without them
-    console.warn('Failed to fetch word timestamps, continuing without them')
+    throw new Error('Failed to download audio from Unreal Speech OutputUri')
   }
 
-  // Calculate duration from last word end time + padding
-  let duration = 3.5 // Default fallback
+  // Download word timestamps from TimestampsUri
+  let words: WordTimestampRaw[] = []
+  if (speechData.TimestampsUri) {
+    try {
+      const tsResponse = await axios.get(speechData.TimestampsUri, { timeout: 15000 })
+      const tsData = tsResponse.data
+
+      // TimestampsUri returns [{word, start, end}, ...] or {words: [...]}
+      if (Array.isArray(tsData)) {
+        words = tsData.map((item: { word: string; start: number; end: number }) => ({
+          word: item.word,
+          start: item.start,
+          end: item.end,
+        }))
+      } else if (tsData && Array.isArray(tsData.words)) {
+        words = tsData.words.map((item: { word: string; start: number; end: number }) => ({
+          word: item.word,
+          start: item.start,
+          end: item.end,
+        }))
+      }
+    } catch {
+      console.warn('[unrealSpeech] Failed to fetch word timestamps, continuing without them')
+    }
+  }
+
+  // Calculate actual duration from last word timestamp + small padding
+  let duration = 3.5
   if (words.length > 0) {
     const lastWord = words[words.length - 1]
     duration = lastWord.end + 0.3
   } else {
-    // Estimate from text
     duration = estimateDuration(cleanedText, params.speed ?? 1.0)
   }
 
   return {
-    audioUrl: '', // Caller uploads to GCS and sets this
     audioBuffer,
     words,
     duration,

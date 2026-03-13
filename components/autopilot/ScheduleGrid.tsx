@@ -66,6 +66,15 @@ function ScheduleGrid({
 
   return (
     <div className="space-y-4">
+      <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-[8px]">
+        <p className="text-[12px] text-indigo-400 font-medium">
+          ⏱️ Note: All schedule times are in UTC
+        </p>
+        <p className="text-[11px] text-[var(--text-secondary)] mt-1">
+          Your videos will be published based on the UTC hour matching your settings below.
+        </p>
+      </div>
+
       {/* AI Optimize toggle */}
       <div className="flex items-center justify-between p-3 rounded-[8px] bg-[var(--accent-subtle)] border border-[var(--accent-border)]">
         <div>

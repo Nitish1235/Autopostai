@@ -17,6 +17,15 @@ export interface ScriptJob {
   imageStyle: string
   voiceId: string
   voiceSpeed: number
+  // FIX #3: If user pre-built & edited the script in the wizard, pass it here
+  // so the worker skips OpenAI generation and uses this directly.
+  prebuiltScript?: Array<{
+    id: string
+    order: number
+    narration: string
+    imagePrompt: string
+    duration?: number
+  }>
 }
 
 export interface ImageJob {
@@ -85,7 +94,9 @@ export async function addVideoToQueue(
   segmentCount: number,
   imageStyle: string,
   voiceId: string,
-  voiceSpeed: number
+  voiceSpeed: number,
+  // FIX #3: pass user-edited script to avoid re-generating via OpenAI
+  prebuiltScript?: ScriptJob['prebuiltScript']
 ): Promise<void> {
   const jobData: ScriptJob = {
     videoId,
@@ -97,6 +108,7 @@ export async function addVideoToQueue(
     imageStyle,
     voiceId,
     voiceSpeed,
+    prebuiltScript,
   }
 
   // Publish to worker's /jobs/script endpoint via QStash

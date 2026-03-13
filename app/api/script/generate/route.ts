@@ -3,13 +3,26 @@ import { z } from 'zod'
 import { auth } from '@clerk/nextjs/server'
 import { generateScript } from '@/lib/api/openai'
 import { checkCredits } from '@/lib/utils/credits'
-import { Redis } from '@upstash/redis'
 
-// ── Redis for Rate Limiting ──────────────────────────
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || 'https://dummy.upstash.io',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || 'dummy_token',
-})
+// ── Redis for Rate Limiting (lazy init) ─────────────
+// If UPSTASH env vars are missing, rate limiting is skipped gracefully.
+
+let _redis: import('@upstash/redis').Redis | null = null
+let _redisChecked = false
+
+async function getRedis() {
+  if (_redisChecked) return _redis
+  _redisChecked = true
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token || url.includes('dummy')) {
+    console.warn('[script/generate] Upstash Redis not configured — rate limiting disabled')
+    return null
+  }
+  const { Redis } = await import('@upstash/redis')
+  _redis = new Redis({ url, token })
+  return _redis
+}
 
 // ── Request Schema ───────────────────────────────────
 const schema = z.object({
@@ -33,8 +46,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-
-
     // 2. Check credits
     const creditStatus = await checkCredits(userId)
     if (!creditStatus.hasCredits) {
@@ -47,23 +58,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Rate limiting: max 5 per user per hour
-    const rateLimitKey = `script_limit:${userId}`
-    const currentCount = await redis.incr(rateLimitKey)
-
-    // Set expiry on first call (when count is 1)
-    if (currentCount === 1) {
-      await redis.expire(rateLimitKey, 3600)
-    }
-
-    if (currentCount > 5) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Rate limit exceeded. Maximum 5 script generations per hour.',
-        },
-        { status: 429 }
-      )
+    // 3. Rate limiting: max 5 per user per hour (skip if Redis not configured)
+    const redis = await getRedis()
+    if (redis) {
+      try {
+        const rateLimitKey = `script_limit:${userId}`
+        const currentCount = await redis.incr(rateLimitKey)
+        if (currentCount === 1) {
+          await redis.expire(rateLimitKey, 3600)
+        }
+        if (currentCount > 5) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Rate limit exceeded. Maximum 5 script generations per hour.',
+            },
+            { status: 429 }
+          )
+        }
+      } catch {
+        // Redis error — allow request through rather than breaking the route
+        console.warn('[script/generate] Redis rate limit check failed — allowing request')
+      }
     }
 
     // 4. Validate input

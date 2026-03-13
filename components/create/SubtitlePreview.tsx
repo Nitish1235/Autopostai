@@ -21,6 +21,10 @@ const STYLE_GRADIENTS: Record<string, string> = {
   minimal: 'linear-gradient(160deg, #E8E8E8, #F5F5F5, #FFFFFF)',
 }
 
+// Phone mockup renders at ~220px wide representing a 1080px real frame.
+// Scale factor: 220/1080 ≈ 0.204, rounded to 0.21 for slightly larger preview text.
+const PREVIEW_SCALE = 0.21
+
 const SAMPLE_WORDS = ['This', 'is', 'how', 'your', 'subtitles', 'will', 'look']
 
 function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
@@ -37,44 +41,54 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
     SUBTITLE_FONTS.find((f) => f.id === config.font)?.family || 'Inter'
   const gradient = STYLE_GRADIENTS[imageStyle] || STYLE_GRADIENTS.cinematic
 
+  const scaledFontSize = Math.max(6, Math.round(config.fontSize * PREVIEW_SCALE))
+  const scaledStroke = config.strokeWidth * PREVIEW_SCALE
+
   const getWordStyle = (index: number): React.CSSProperties => {
     const isActive = index === activeWordIndex
     const isSpoken = index < activeWordIndex
 
+    let color = config.primaryColor
+    if (isActive) color = config.activeColor
+    if (isSpoken) color = config.spokenColor
+    if (config.firstWordAccent && index === 0) color = config.accentColor
+
     const base: React.CSSProperties = {
       fontFamily,
-      fontSize: `${Math.max(8, config.fontSize * 0.3)}px`,
+      fontSize: `${scaledFontSize}px`,
       fontWeight: 800,
       lineHeight: 1.2,
       textTransform: config.uppercase ? 'uppercase' : 'none',
-      color: isActive
-        ? config.activeColor
-        : isSpoken
-          ? config.spokenColor
-          : config.primaryColor,
+      color,
       transition: `all ${config.animationDuration}ms ease`,
       display: 'inline-block',
-      margin: '0 2px',
+      margin: '0 1px',
+      position: 'relative',
+      zIndex: 1,
     }
 
     if (config.strokeWidth > 0) {
-      base.WebkitTextStroke = `${config.strokeWidth * 0.3}px ${config.strokeColor}`
+      base.WebkitTextStroke = `${scaledStroke}px ${config.strokeColor}`
     }
 
     if (config.shadow) {
-      base.textShadow = '2px 2px 4px rgba(0,0,0,0.8)'
+      base.textShadow = '1px 1px 3px rgba(0,0,0,0.9)'
     }
 
     if (config.glow) {
-      base.textShadow = `0 0 10px ${config.activeColor}40, 0 0 20px ${config.activeColor}20`
-    }
-
-    if (config.firstWordAccent && index === 0) {
-      base.color = config.accentColor
+      base.textShadow = `0 0 6px ${config.activeColor}60, 0 0 12px ${config.activeColor}30`
     }
 
     if (isActive && config.animation === 'pop') {
       base.transform = 'scale(1.15)'
+    }
+
+    if (isActive && config.animation === 'slideUp') {
+      base.transform = 'translateY(-1px)'
+    }
+
+    if (isActive && config.animation === 'bounce') {
+      base.transform = 'translateY(-2px)'
     }
 
     return base
@@ -83,15 +97,16 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
   return (
     <PhoneMockup platform="tiktok">
       <div
-        className="w-full h-full relative"
+        className="w-full h-full relative overflow-hidden"
         style={{ background: gradient }}
       >
         {/* Subtitle area */}
         <div
-          className="absolute left-0 right-0 px-3 flex flex-wrap justify-center"
+          className="absolute left-0 right-0 px-2"
           style={{
             top: `${config.position}%`,
-            textAlign: config.alignment,
+            display: 'flex',
+            flexWrap: 'wrap',
             justifyContent:
               config.alignment === 'left'
                 ? 'flex-start'
@@ -100,17 +115,22 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
                   : 'center',
           }}
         >
+          {/* Background box — rendered BEHIND words via z-index */}
           {config.backgroundBox && (
             <div
-              className="absolute inset-0 -mx-1 -my-0.5 rounded"
+              className="absolute inset-0 rounded"
               style={{
                 backgroundColor: config.bgColor,
                 opacity: config.bgOpacity,
-                borderRadius: `${config.bgRadius || 4}px`,
+                borderRadius: `${(config.bgRadius || 4) * PREVIEW_SCALE}px`,
+                zIndex: 0,
+                margin: '-1px -2px',
               }}
             />
           )}
-          <div className="relative flex flex-wrap gap-[2px] justify-center">
+
+          {/* Words */}
+          <div className="relative flex flex-wrap gap-px" style={{ zIndex: 1 }}>
             {SAMPLE_WORDS.map((word, i) => (
               <span key={i} style={getWordStyle(i)}>
                 {word}

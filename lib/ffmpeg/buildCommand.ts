@@ -174,8 +174,25 @@ export async function renderVideo(params: {
       const clipPath = path.join(workDir, `clip_${index}.mp4`)
       const duration = script[index].duration ?? 3.5
 
+      // FIX #6/#7: If image is missing, generate a solid black frame instead of
+      // skipping. This keeps audio and video perfectly in sync regardless of
+      // image download failures.
       if (!fs.existsSync(imgPath)) {
-        console.warn(`[render] Image not found: ${imgPath}, skipping`)
+        console.warn(`[render] Image not found for segment ${index} — generating black frame`)
+        try {
+          await execFFmpeg([
+            '-f', 'lavfi',
+            '-i', `color=c=black:s=1080x1920:r=30:d=${duration}`,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '28',
+            '-y', clipPath,
+          ])
+          imageClipPaths.push(clipPath)
+          clipDurations.push(duration)
+        } catch (blackErr) {
+          console.error(`[render] Black frame fallback also failed for segment ${index}:`, blackErr)
+        }
         continue
       }
 

@@ -18,7 +18,29 @@ const schema = z.object({
   voiceSpeed: z.number().min(0.75).max(1.5),
   musicMood: z.string(),
   musicVolume: z.number().min(0).max(1),
-  subtitleConfig: z.record(z.unknown()),
+  subtitleConfig: z.object({
+    font: z.enum(['Montserrat', 'Roboto', 'Inter', 'Proxima Nova', 'Bangers', 'Komika', 'The Bold Font', 'Oswald', 'Playfair Display']),
+    fontSize: z.number().min(10).max(200),
+    primaryColor: z.string(),
+    activeColor: z.string(),
+    spokenColor: z.string(),
+    firstWordAccent: z.boolean(),
+    accentColor: z.string(),
+    strokeColor: z.string(),
+    strokeWidth: z.number(),
+    backgroundBox: z.boolean(),
+    bgColor: z.string(),
+    bgOpacity: z.number().min(0).max(1),
+    bgRadius: z.number(),
+    shadow: z.boolean(),
+    glow: z.boolean(),
+    animation: z.enum(['none', 'pop', 'fade', 'slide_up', 'slide_down', 'typewriter', 'spring', 'bounce', 'karoke', 'zoom_in']),
+    animationDuration: z.number().min(0).max(1),
+    position: z.number().min(0).max(100),
+    alignment: z.enum(['left', 'center', 'right']),
+    maxWordsPerLine: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    uppercase: z.boolean(),
+  }),
   platforms: z.array(z.string()).min(1),
   scheduledAt: z.string().datetime().optional(),
   generationMode: z.enum(['image_stack', 'ai_video']).default('image_stack'),
@@ -86,7 +108,9 @@ export async function POST(request: NextRequest) {
 
     const isAiVideo = generationMode === 'ai_video'
 
-    // 3. Deduct credit (different pool per mode)
+    // 3. Deduct credit upfront (different pool per mode)
+    // FIX #4: Credit deducted BEFORE video record is created to eliminate the race
+    // condition where a video exists in DB but no credit was charged.
     try {
       if (isAiVideo) {
         const { hasCredits } = await checkAiVideoCredits(userId)
@@ -99,6 +123,7 @@ export async function POST(request: NextRequest) {
             { status: 402 }
           )
         }
+        await deductAiVideoCredit(userId, 'pending', 'AI Video generation')
       } else {
         await deductCredit(userId, 'video-pending', 'Video generation')
       }
@@ -151,9 +176,6 @@ export async function POST(request: NextRequest) {
     // 5. Route to appropriate queue
     try {
       if (isAiVideo) {
-        // Deduct AI video credit atomically
-        await deductAiVideoCredit(userId, video.id, 'AI Video generation')
-
         await addAiVideoToQueue(video.id, {
           videoId: video.id,
           userId,
@@ -180,6 +202,7 @@ export async function POST(request: NextRequest) {
         })
 
         const segmentCount = getSegmentCount(format)
+        // FIX #3: Pass user-edited script so the worker skips re-generation
         await addVideoToQueue(
           video.id,
           userId,
@@ -189,16 +212,15 @@ export async function POST(request: NextRequest) {
           segmentCount,
           imageStyle,
           voiceId,
-          voiceSpeed
+          voiceSpeed,
+          providedScript ?? undefined
         )
       }
     } catch (err) {
       // Clean up: delete video + renderJob, refund credit
       await prisma.renderJob.deleteMany({ where: { videoId: video.id } })
       await prisma.video.delete({ where: { id: video.id } })
-      if (!isAiVideo) {
-        await addCredits(userId, 1, 'refund', 'Video queue failed — credit returned')
-      }
+      await addCredits(userId, 1, 'refund', 'Video queue failed — credit returned')
       throw err
     }
 

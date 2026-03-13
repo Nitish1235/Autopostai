@@ -174,6 +174,12 @@ export const NEGATIVE_PROMPT =
   'cartoon, childish, stock photo, oversaturated, overexposed, ' +
   'amateur, nsfw, violence'
 
+// ── UnrealSpeech V8 Voice IDs ────────────────────────────────────────────
+// API base: https://api.v8.unrealspeech.com
+// V8 supports 48 voices across 8 languages.
+// VoiceId = the exact string to pass to the API (case-sensitive).
+// Note: V7 voices (Dan, Will, Scarlett, Liv, Amy) are NOT used — we target V8.
+
 export const VOICES: {
   id: string
   name: string
@@ -181,56 +187,57 @@ export const VOICES: {
   accent: string
   tags: string[]
   language: string
+  unrealId: string  // Actual VoiceId to send to UnrealSpeech V8 API
 }[] = [
     // ── American Female ────────────────────────────────
-    { id: 'Autumn', name: 'Autumn', gender: 'Female', accent: 'American', tags: ['Warm', 'Friendly'], language: 'English' },
-    { id: 'Melody', name: 'Melody', gender: 'Female', accent: 'American', tags: ['Sweet', 'Youthful'], language: 'English' },
-    { id: 'Hannah', name: 'Hannah', gender: 'Female', accent: 'American', tags: ['Clear', 'Professional'], language: 'English' },
-    { id: 'Emily', name: 'Emily', gender: 'Female', accent: 'American', tags: ['Calm', 'Storytelling'], language: 'English' },
-    { id: 'Ivy', name: 'Ivy', gender: 'Female', accent: 'American', tags: ['Crisp', 'Energetic'], language: 'English' },
-    { id: 'Kaitlyn', name: 'Kaitlyn', gender: 'Female', accent: 'American', tags: ['Soft', 'Relaxing'], language: 'English' },
-    { id: 'Luna', name: 'Luna', gender: 'Female', accent: 'American', tags: ['Dreamy', 'Gentle'], language: 'English' },
-    { id: 'Willow', name: 'Willow', gender: 'Female', accent: 'American', tags: ['Smooth', 'Elegant'], language: 'English' },
-    { id: 'Lauren', name: 'Lauren', gender: 'Female', accent: 'American', tags: ['Authoritative', 'Bold'], language: 'English' },
-    { id: 'Sierra', name: 'Sierra', gender: 'Female', accent: 'American', tags: ['Natural', 'Casual'], language: 'English' },
+    { id: 'Autumn', name: 'Autumn', gender: 'Female', accent: 'American', tags: ['Warm', 'Friendly'], language: 'English', unrealId: 'Autumn' },
+    { id: 'Melody', name: 'Melody', gender: 'Female', accent: 'American', tags: ['Sweet', 'Youthful'], language: 'English', unrealId: 'Melody' },
+    { id: 'Hannah', name: 'Hannah', gender: 'Female', accent: 'American', tags: ['Clear', 'Professional'], language: 'English', unrealId: 'Hannah' },
+    { id: 'Emily', name: 'Emily', gender: 'Female', accent: 'American', tags: ['Calm', 'Storytelling'], language: 'English', unrealId: 'Emily' },
+    { id: 'Ivy', name: 'Ivy', gender: 'Female', accent: 'American', tags: ['Crisp', 'Energetic'], language: 'English', unrealId: 'Ivy' },
+    { id: 'Kaitlyn', name: 'Kaitlyn', gender: 'Female', accent: 'American', tags: ['Soft', 'Relaxing'], language: 'English', unrealId: 'Kaitlyn' },
+    { id: 'Luna', name: 'Luna', gender: 'Female', accent: 'American', tags: ['Dreamy', 'Gentle'], language: 'English', unrealId: 'Luna' },
+    { id: 'Willow', name: 'Willow', gender: 'Female', accent: 'American', tags: ['Smooth', 'Elegant'], language: 'English', unrealId: 'Willow' },
+    { id: 'Lauren', name: 'Lauren', gender: 'Female', accent: 'American', tags: ['Authoritative', 'Bold'], language: 'English', unrealId: 'Lauren' },
+    { id: 'Sierra', name: 'Sierra', gender: 'Female', accent: 'American', tags: ['Natural', 'Casual'], language: 'English', unrealId: 'Sierra' },
     // ── American Male ──────────────────────────────────
-    { id: 'Noah', name: 'Noah', gender: 'Male', accent: 'American', tags: ['Deep', 'Authoritative'], language: 'English' },
-    { id: 'Jasper', name: 'Jasper', gender: 'Male', accent: 'American', tags: ['Warm', 'Engaging'], language: 'English' },
-    { id: 'Caleb', name: 'Caleb', gender: 'Male', accent: 'American', tags: ['Energetic', 'Youthful'], language: 'English' },
-    { id: 'Ronan', name: 'Ronan', gender: 'Male', accent: 'American', tags: ['Dramatic', 'Narrative'], language: 'English' },
-    { id: 'Ethan', name: 'Ethan', gender: 'Male', accent: 'American', tags: ['Confident', 'Clear'], language: 'English' },
-    { id: 'Daniel', name: 'Daniel', gender: 'Male', accent: 'American', tags: ['Formal', 'Professional'], language: 'English' },
-    { id: 'Zane', name: 'Zane', gender: 'Male', accent: 'American', tags: ['Cool', 'Modern'], language: 'English' },
-    // ── British Female ─────────────────────────────────
-    { id: 'Élodie', name: 'Élodie', gender: 'Female', accent: 'French', tags: ['Elegant', 'Refined'], language: 'French' },
+    { id: 'Noah', name: 'Noah', gender: 'Male', accent: 'American', tags: ['Deep', 'Authoritative'], language: 'English', unrealId: 'Noah' },
+    { id: 'Jasper', name: 'Jasper', gender: 'Male', accent: 'American', tags: ['Warm', 'Engaging'], language: 'English', unrealId: 'Jasper' },
+    { id: 'Caleb', name: 'Caleb', gender: 'Male', accent: 'American', tags: ['Energetic', 'Youthful'], language: 'English', unrealId: 'Caleb' },
+    { id: 'Ronan', name: 'Ronan', gender: 'Male', accent: 'American', tags: ['Dramatic', 'Narrative'], language: 'English', unrealId: 'Ronan' },
+    { id: 'Ethan', name: 'Ethan', gender: 'Male', accent: 'American', tags: ['Confident', 'Clear'], language: 'English', unrealId: 'Ethan' },
+    { id: 'Daniel', name: 'Daniel', gender: 'Male', accent: 'American', tags: ['Formal', 'Professional'], language: 'English', unrealId: 'Daniel' },
+    { id: 'Zane', name: 'Zane', gender: 'Male', accent: 'American', tags: ['Cool', 'Modern'], language: 'English', unrealId: 'Zane' },
+    // ── French Female ──────────────────────────────────
+    { id: 'Élodie', name: 'Élodie', gender: 'Female', accent: 'French', tags: ['Elegant', 'Refined'], language: 'French', unrealId: 'Élodie' },
     // ── Spanish ────────────────────────────────────────
-    { id: 'Lucía', name: 'Lucía', gender: 'Female', accent: 'Spanish', tags: ['Warm', 'Articulate'], language: 'Spanish' },
-    { id: 'Mateo', name: 'Mateo', gender: 'Male', accent: 'Spanish', tags: ['Deep', 'Natural'], language: 'Spanish' },
-    { id: 'Javier', name: 'Javier', gender: 'Male', accent: 'Spanish', tags: ['Smooth', 'Clear'], language: 'Spanish' },
+    { id: 'Lucía', name: 'Lucía', gender: 'Female', accent: 'Spanish', tags: ['Warm', 'Articulate'], language: 'Spanish', unrealId: 'Lucía' },
+    { id: 'Mateo', name: 'Mateo', gender: 'Male', accent: 'Spanish', tags: ['Deep', 'Natural'], language: 'Spanish', unrealId: 'Mateo' },
+    { id: 'Javier', name: 'Javier', gender: 'Male', accent: 'Spanish', tags: ['Smooth', 'Clear'], language: 'Spanish', unrealId: 'Javier' },
     // ── Portuguese ─────────────────────────────────────
-    { id: 'Camila', name: 'Camila', gender: 'Female', accent: 'Portuguese', tags: ['Friendly', 'Warm'], language: 'Portuguese' },
-    { id: 'Thiago', name: 'Thiago', gender: 'Male', accent: 'Portuguese', tags: ['Engaging', 'Natural'], language: 'Portuguese' },
-    { id: 'Rafael', name: 'Rafael', gender: 'Male', accent: 'Portuguese', tags: ['Confident', 'Clear'], language: 'Portuguese' },
+    { id: 'Camila', name: 'Camila', gender: 'Female', accent: 'Portuguese', tags: ['Friendly', 'Warm'], language: 'Portuguese', unrealId: 'Camila' },
+    { id: 'Thiago', name: 'Thiago', gender: 'Male', accent: 'Portuguese', tags: ['Engaging', 'Natural'], language: 'Portuguese', unrealId: 'Thiago' },
+    { id: 'Rafael', name: 'Rafael', gender: 'Male', accent: 'Portuguese', tags: ['Confident', 'Clear'], language: 'Portuguese', unrealId: 'Rafael' },
     // ── Italian ────────────────────────────────────────
-    { id: 'Giulia', name: 'Giulia', gender: 'Female', accent: 'Italian', tags: ['Expressive', 'Melodic'], language: 'Italian' },
-    { id: 'Luca', name: 'Luca', gender: 'Male', accent: 'Italian', tags: ['Warm', 'Storytelling'], language: 'Italian' },
+    { id: 'Giulia', name: 'Giulia', gender: 'Female', accent: 'Italian', tags: ['Expressive', 'Melodic'], language: 'Italian', unrealId: 'Giulia' },
+    { id: 'Luca', name: 'Luca', gender: 'Male', accent: 'Italian', tags: ['Warm', 'Storytelling'], language: 'Italian', unrealId: 'Luca' },
     // ── Hindi ──────────────────────────────────────────
-    { id: 'Ananya', name: 'Ananya', gender: 'Female', accent: 'Hindi', tags: ['Clear', 'Professional'], language: 'Hindi' },
-    { id: 'Priya', name: 'Priya', gender: 'Female', accent: 'Hindi', tags: ['Soft', 'Calm'], language: 'Hindi' },
-    { id: 'Arjun', name: 'Arjun', gender: 'Male', accent: 'Hindi', tags: ['Authoritative', 'Bold'], language: 'Hindi' },
-    { id: 'Rohan', name: 'Rohan', gender: 'Male', accent: 'Hindi', tags: ['Friendly', 'Youthful'], language: 'Hindi' },
+    { id: 'Ananya', name: 'Ananya', gender: 'Female', accent: 'Hindi', tags: ['Clear', 'Professional'], language: 'Hindi', unrealId: 'Ananya' },
+    { id: 'Priya', name: 'Priya', gender: 'Female', accent: 'Hindi', tags: ['Soft', 'Calm'], language: 'Hindi', unrealId: 'Priya' },
+    { id: 'Arjun', name: 'Arjun', gender: 'Male', accent: 'Hindi', tags: ['Authoritative', 'Bold'], language: 'Hindi', unrealId: 'Arjun' },
+    { id: 'Rohan', name: 'Rohan', gender: 'Male', accent: 'Hindi', tags: ['Friendly', 'Youthful'], language: 'Hindi', unrealId: 'Rohan' },
     // ── Chinese ────────────────────────────────────────
-    { id: 'Mei', name: 'Mei', gender: 'Female', accent: 'Chinese', tags: ['Clear', 'Gentle'], language: 'Chinese' },
-    { id: 'Lian', name: 'Lian', gender: 'Female', accent: 'Chinese', tags: ['Warm', 'Natural'], language: 'Chinese' },
-    { id: 'Ting', name: 'Ting', gender: 'Female', accent: 'Chinese', tags: ['Crisp', 'Modern'], language: 'Chinese' },
-    { id: 'Jing', name: 'Jing', gender: 'Female', accent: 'Chinese', tags: ['Soft', 'Elegant'], language: 'Chinese' },
-    { id: 'Wei', name: 'Wei', gender: 'Male', accent: 'Chinese', tags: ['Deep', 'Professional'], language: 'Chinese' },
-    { id: 'Jian', name: 'Jian', gender: 'Male', accent: 'Chinese', tags: ['Confident', 'Clear'], language: 'Chinese' },
-    { id: 'Hao', name: 'Hao', gender: 'Male', accent: 'Chinese', tags: ['Engaging', 'Warm'], language: 'Chinese' },
-    { id: 'Sheng', name: 'Sheng', gender: 'Male', accent: 'Chinese', tags: ['Bold', 'Narrative'], language: 'Chinese' },
+    { id: 'Mei', name: 'Mei', gender: 'Female', accent: 'Chinese', tags: ['Clear', 'Gentle'], language: 'Chinese', unrealId: 'Mei' },
+    { id: 'Lian', name: 'Lian', gender: 'Female', accent: 'Chinese', tags: ['Warm', 'Natural'], language: 'Chinese', unrealId: 'Lian' },
+    { id: 'Ting', name: 'Ting', gender: 'Female', accent: 'Chinese', tags: ['Crisp', 'Modern'], language: 'Chinese', unrealId: 'Ting' },
+    { id: 'Jing', name: 'Jing', gender: 'Female', accent: 'Chinese', tags: ['Soft', 'Elegant'], language: 'Chinese', unrealId: 'Jing' },
+    { id: 'Wei', name: 'Wei', gender: 'Male', accent: 'Chinese', tags: ['Deep', 'Professional'], language: 'Chinese', unrealId: 'Wei' },
+    { id: 'Jian', name: 'Jian', gender: 'Male', accent: 'Chinese', tags: ['Confident', 'Clear'], language: 'Chinese', unrealId: 'Jian' },
+    { id: 'Hao', name: 'Hao', gender: 'Male', accent: 'Chinese', tags: ['Engaging', 'Warm'], language: 'Chinese', unrealId: 'Hao' },
+    { id: 'Sheng', name: 'Sheng', gender: 'Male', accent: 'Chinese', tags: ['Bold', 'Narrative'], language: 'Chinese', unrealId: 'Sheng' },
     // ── Japanese ───────────────────────────────────────
-    { id: 'Yuki', name: 'Yuki', gender: 'Female', accent: 'Japanese', tags: ['Soft', 'Natural'], language: 'Japanese' },
-    { id: 'Haruto', name: 'Haruto', gender: 'Male', accent: 'Japanese', tags: ['Clear', 'Professional'], language: 'Japanese' },
+    { id: 'Yuki', name: 'Yuki', gender: 'Female', accent: 'Japanese', tags: ['Soft', 'Natural'], language: 'Japanese', unrealId: 'Yuki' },
+    { id: 'Haruto', name: 'Haruto', gender: 'Male', accent: 'Japanese', tags: ['Clear', 'Professional'], language: 'Japanese', unrealId: 'Haruto' },
   ]
 
 export const MUSIC_MOODS: {

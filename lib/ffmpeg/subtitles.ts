@@ -88,11 +88,12 @@ export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
       break
   }
 
-  // MarginV: distance from bottom
-  // position 0 = near bottom (40px), position 100 = near top
-  const marginV = Math.round(
-    40 + (subtitleConfig.position / 100) * (1920 - 80 - subtitleConfig.fontSize)
-  )
+  // MarginV: distance from bottom edge in pixels.
+  // In ASS, marginV=40 means 40px from bottom (alignment 1/2/3).
+  // User's 'position': 0 = top of frame, 100 = bottom of frame.
+  // We invert so position=75 (near-bottom UI) → small marginV (stays near bottom).
+  const maxMargin = 1920 - 80 - subtitleConfig.fontSize
+  const marginV = Math.round(40 + ((100 - subtitleConfig.position) / 100) * (maxMargin - 40))
 
   // Background color with opacity for border style 3 (box)
   const bgAlpha = Math.round((1 - subtitleConfig.bgOpacity) * 255)

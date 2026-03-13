@@ -82,9 +82,23 @@ export async function generateScript(params: {
     }
 
     if (parsed.segments.length !== segmentCount) {
-      throw new Error(
-        `Expected ${segmentCount} segments but got ${parsed.segments.length}`
-      )
+      // FIX #13: Accept ±2 segment tolerance — GPT-4o sometimes returns near-correct counts.
+      // Trim extra or pad with duplicate of last segment rather than failing.
+      const tolerance = 2
+      if (Math.abs(parsed.segments.length - segmentCount) > tolerance) {
+        throw new Error(
+          `Expected ~${segmentCount} segments but got ${parsed.segments.length} (tolerance ±${tolerance})`
+        )
+      }
+      // Trim to required count if too many
+      if (parsed.segments.length > segmentCount) {
+        parsed.segments = parsed.segments.slice(0, segmentCount)
+      }
+      // Pad with last segment duplicate if too few
+      while (parsed.segments.length < segmentCount) {
+        const last = parsed.segments[parsed.segments.length - 1]
+        parsed.segments.push({ ...last, id: `seg_pad_${parsed.segments.length}` })
+      }
     }
 
     // Map and validate each segment
