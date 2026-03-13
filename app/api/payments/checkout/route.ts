@@ -25,6 +25,13 @@ const VALID_PLAN_IDS: Record<string, string> = {
   creator_max: process.env.DODO_MAX_PLAN_ID ?? '',
 }
 
+// Dodo product IDs for credit packs — reusing existing Cloud Run env vars
+const CREDIT_PACK_PRODUCT_IDS: Record<string, string> = {
+  pack_10: process.env.DODO_STARTER_PLAN_ID ?? '',
+  pack_25: process.env.DODO_PRO_PLAN_ID ?? '',
+  pack_50: process.env.DODO_MAX_PLAN_ID ?? '',
+}
+
 // ── POST — Create Checkout Session ───────────────────
 
 export async function POST(request: Request) {
@@ -130,13 +137,20 @@ export async function POST(request: Request) {
         )
       }
 
+      const dodoProductId = CREDIT_PACK_PRODUCT_IDS[packId]
+      if (!dodoProductId) {
+        console.error(`[payments/checkout] Missing Dodo product ID for pack: ${packId}`)
+        return NextResponse.json(
+          { success: false, error: 'Credit pack not configured. Please contact support.' },
+          { status: 500 }
+        )
+      }
+
       const successUrl = `${APP_URL}/settings?tab=credits&success=1`
 
       const result = await createOneTimePayment(
         customerId,
-        pack.price * 100, // Convert to cents
-        'USD',
-        pack.label,
+        dodoProductId,
         successUrl,
         {
           type: 'credit_pack',

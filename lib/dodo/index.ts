@@ -69,7 +69,7 @@ export async function createSubscription(
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer: customerId,
+    customer: { customer_id: customerId },
     product_cart: [
       {
         product_id: planId,
@@ -114,21 +114,22 @@ export async function getSubscription(
 // ── Create One-Time Payment ──────────────────────────
 export async function createOneTimePayment(
   customerId: string,
-  amount: number,
-  currency: string,
-  description: string,
+  productId: string,
   successUrl: string,
   metadata?: Record<string, string>
 ): Promise<{ paymentId: string; checkoutUrl: string }> {
-  // Use /payments Checkout Session for one-time arbitrary amounts.
+  // Dodo requires product_cart for all /payments checkout sessions
   const result = await dodoFetch<{
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer: customerId,
-    amount, // Passing raw amount (cents) for dynamic items if Dodo supports it, or it will throw 422 if Dodo forced product catalogs completely. 
-    currency,
-    description,
+    customer: { customer_id: customerId },
+    product_cart: [
+      {
+        product_id: productId,
+        quantity: 1,
+      },
+    ],
     return_url: successUrl,
     ...(metadata && { metadata }),
   })
