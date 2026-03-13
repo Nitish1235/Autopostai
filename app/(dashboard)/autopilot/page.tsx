@@ -113,12 +113,12 @@ export default function AutopilotPage() {
           setNextRunAt(cfg.nextRunAt ?? null)
         }
 
-        // Fetch topics
+        // Fetch topics — API returns { data: { topics: [], pagination: {} } }
         const topicsRes = await fetch('/api/autopilot/topics')
         if (topicsRes.ok) {
           const topicsData = await topicsRes.json()
-          if (topicsData.success && topicsData.data) {
-            setTopics(topicsData.data)
+          if (topicsData.success && Array.isArray(topicsData.data?.topics)) {
+            setTopics(topicsData.data.topics)
           }
         }
       } catch {
