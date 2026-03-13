@@ -69,9 +69,7 @@ export async function createSubscription(
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer: {
-      customer_id: customerId,
-    },
+    customer: customerId,
     product_cart: [
       {
         product_id: planId,
@@ -127,9 +125,7 @@ export async function createOneTimePayment(
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer: {
-      customer_id: customerId,
-    },
+    customer: customerId,
     amount, // Passing raw amount (cents) for dynamic items if Dodo supports it, or it will throw 422 if Dodo forced product catalogs completely. 
     currency,
     description,

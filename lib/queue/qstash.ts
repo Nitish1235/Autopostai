@@ -6,6 +6,7 @@ import { Client } from '@upstash/qstash'
 
 const qstash = new Client({
   token: process.env.QSTASH_TOKEN!,
+  baseUrl: process.env.QSTASH_URL, // Set this in GCP to https://qstash.upstash.io or your specific region URL to avoid Anycast EU routing issues
 })
 
 // The public URL of the autopost-worker Cloud Run service
