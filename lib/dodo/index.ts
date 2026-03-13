@@ -64,11 +64,11 @@ export async function createSubscription(
   successUrl: string,
   cancelUrl: string
 ): Promise<{ subscriptionId: string; checkoutUrl: string }> {
-  // Dodo requires creating a Checkout Session via /payments for subscriptions
+  // Official SDK: client.checkoutSessions.create() → POST /checkouts
   const result = await dodoFetch<{
-    id: string
+    session_id: string
     checkout_url: string
-  }>('/payments', 'POST', {
+  }>('/checkouts', 'POST', {
     customer: { customer_id: customerId },
     product_cart: [
       {
@@ -79,7 +79,7 @@ export async function createSubscription(
     return_url: successUrl,
   })
   return {
-    subscriptionId: result.id, // This is the payment session ID, but webhook handles the actual sub ID
+    subscriptionId: result.session_id,
     checkoutUrl: result.checkout_url,
   }
 }
@@ -118,11 +118,11 @@ export async function createOneTimePayment(
   successUrl: string,
   metadata?: Record<string, string>
 ): Promise<{ paymentId: string; checkoutUrl: string }> {
-  // Dodo requires product_cart for all /payments checkout sessions
+  // Official SDK: client.checkoutSessions.create() → POST /checkouts
   const result = await dodoFetch<{
-    id: string
+    session_id: string
     checkout_url: string
-  }>('/payments', 'POST', {
+  }>('/checkouts', 'POST', {
     customer: { customer_id: customerId },
     product_cart: [
       {
@@ -134,7 +134,7 @@ export async function createOneTimePayment(
     ...(metadata && { metadata }),
   })
   return {
-    paymentId: result.id,
+    paymentId: result.session_id,
     checkoutUrl: result.checkout_url,
   }
 }
