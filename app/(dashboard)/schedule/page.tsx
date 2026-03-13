@@ -81,7 +81,24 @@ export default function SchedulePage() {
     async function fetchSchedule() {
       setLoading(true)
       try {
-        const res = await fetch('/api/schedule')
+        // Build a window: start of previous month → end of next month
+        // (covers any week or month view the user navigates to)
+        const start = new Date(currentDate)
+        start.setMonth(start.getMonth() - 1)
+        start.setDate(1)
+        start.setHours(0, 0, 0, 0)
+
+        const end = new Date(currentDate)
+        end.setMonth(end.getMonth() + 2)
+        end.setDate(0)
+        end.setHours(23, 59, 59, 999)
+
+        const params = new URLSearchParams({
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        })
+
+        const res = await fetch(`/api/schedule?${params}`)
         const data = await res.json()
         if (data.success) setPosts(data.data || [])
       } catch {

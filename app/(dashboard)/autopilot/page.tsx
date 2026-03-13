@@ -83,6 +83,11 @@ export default function AutopilotPage() {
     async function fetchConfig() {
       try {
         const res = await fetch('/api/autopilot')
+        if (!res.ok) {
+          console.error('[autopilot] API error:', res.status)
+          toast({ message: 'Failed to load autopilot config', type: 'error' })
+          return
+        }
         const data = await res.json()
         if (data.success && data.data) {
           const cfg = data.data
@@ -110,9 +115,11 @@ export default function AutopilotPage() {
 
         // Fetch topics
         const topicsRes = await fetch('/api/autopilot/topics')
-        const topicsData = await topicsRes.json()
-        if (topicsData.success && topicsData.data) {
-          setTopics(topicsData.data)
+        if (topicsRes.ok) {
+          const topicsData = await topicsRes.json()
+          if (topicsData.success && topicsData.data) {
+            setTopics(topicsData.data)
+          }
         }
       } catch {
         toast({ message: 'Failed to load autopilot config', type: 'error' })
