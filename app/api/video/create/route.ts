@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
+      console.error('[API/Video/Create] Zod Validation Failed:', JSON.stringify(parsed.error.flatten().fieldErrors, null, 2))
       return NextResponse.json(
         {
           success: false,
