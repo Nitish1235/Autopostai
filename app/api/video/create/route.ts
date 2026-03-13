@@ -20,7 +20,7 @@ const schema = z.object({
   musicVolume: z.number().min(0).max(1),
   subtitleConfig: z.object({
     font: z.enum(['impact', 'inter', 'bebas', 'caveat', 'playfair', 'mono', 'nunito', 'barlow', 'cormorant', 'marker']),
-    fontSize: z.number().min(10).max(200),
+    fontSize: z.number().min(10),
     primaryColor: z.string(),
     activeColor: z.string(),
     spokenColor: z.string(),
@@ -30,13 +30,13 @@ const schema = z.object({
     strokeWidth: z.number(),
     backgroundBox: z.boolean(),
     bgColor: z.string(),
-    bgOpacity: z.number().min(0).max(100), // Account for percentage values/slight float overflows
+    bgOpacity: z.number().min(0),
     bgRadius: z.number(),
     shadow: z.boolean(),
     glow: z.boolean(),
     animation: z.enum(['none', 'pop', 'slideUp', 'fade', 'bounce', 'blur']), // MATCH SubtitleAnimation type
-    animationDuration: z.number().min(0).max(100),
-    position: z.number().min(0).max(100),
+    animationDuration: z.number().min(0),
+    position: z.number().min(0),
     alignment: z.enum(['left', 'center', 'right']),
     maxWordsPerLine: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     uppercase: z.boolean(),

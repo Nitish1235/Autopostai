@@ -64,17 +64,23 @@ export async function createSubscription(
   successUrl: string,
   cancelUrl: string
 ): Promise<{ subscriptionId: string; checkoutUrl: string }> {
+  // Dodo requires creating a Checkout Session via /payments for subscriptions
   const result = await dodoFetch<{
     id: string
     checkout_url: string
-  }>('/subscriptions', 'POST', {
+  }>('/payments', 'POST', {
     customer_id: customerId,
-    plan_id: planId,
+    product_cart: [
+      {
+        product_id: planId,
+        quantity: 1,
+      },
+    ],
     success_url: successUrl,
     cancel_url: cancelUrl,
   })
   return {
-    subscriptionId: result.id,
+    subscriptionId: result.id, // This is the payment session ID, but webhook handles the actual sub ID
     checkoutUrl: result.checkout_url,
   }
 }

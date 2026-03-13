@@ -95,8 +95,15 @@ export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
   const maxMargin = 1920 - 80 - subtitleConfig.fontSize
   const marginV = Math.round(40 + ((100 - subtitleConfig.position) / 100) * (maxMargin - 40))
 
+  // Normalize raw opacity inputs. UI might accidentally pass percentages (0-100) instead of floats (0-1).
+  let normalizedOpacity = subtitleConfig.bgOpacity
+  if (normalizedOpacity > 1) {
+    normalizedOpacity = normalizedOpacity / 100
+  }
+  normalizedOpacity = Math.max(0, Math.min(1, normalizedOpacity))
+  
   // Background color with opacity for border style 3 (box)
-  const bgAlpha = Math.round((1 - subtitleConfig.bgOpacity) * 255)
+  const bgAlpha = Math.round((1 - normalizedOpacity) * 255)
 
   return {
     name: 'Default',
