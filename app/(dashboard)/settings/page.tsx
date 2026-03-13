@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [user, setUser] = useState<UserData | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
@@ -202,6 +203,30 @@ export default function SettingsPage() {
       }
     } catch {
       toast({ message: 'Network error', type: 'error' })
+    }
+  }
+
+  const handleUpgradePlan = async (planId: string) => {
+    setCheckoutLoading(planId)
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'subscription', planId }),
+      })
+      const data = await res.json()
+      if (data.success && data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl
+      } else {
+        toast({
+          message: data.error || 'Failed to start checkout',
+          type: 'error',
+        })
+      }
+    } catch {
+      toast({ message: 'Network error', type: 'error' })
+    } finally {
+      setCheckoutLoading(null)
     }
   }
 
@@ -419,10 +444,23 @@ export default function SettingsPage() {
                     <p className="text-[12px] text-[var(--text-secondary)] mt-1">
                       {info.credits} credits/mo
                     </p>
-                    {plan === planId && (
+                    {plan === planId ? (
                       <Badge variant="accent" size="sm" className="mt-2">
                         Current
                       </Badge>
+                    ) : (
+                      <div className="mt-3">
+                        <Button
+                          variant={plan === 'free' ? 'primary' : 'secondary'}
+                          size="sm"
+                          className="w-full"
+                          loading={checkoutLoading === planId}
+                          disabled={checkoutLoading !== null}
+                          onClick={() => handleUpgradePlan(planId)}
+                        >
+                          Upgrade
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}
