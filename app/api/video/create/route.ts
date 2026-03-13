@@ -19,7 +19,7 @@ const schema = z.object({
   musicMood: z.string(),
   musicVolume: z.number().min(0).max(1),
   subtitleConfig: z.object({
-    font: z.enum(['Montserrat', 'Roboto', 'Inter', 'Proxima Nova', 'Bangers', 'Komika', 'The Bold Font', 'Oswald', 'Playfair Display']),
+    font: z.enum(['impact', 'inter', 'bebas', 'caveat', 'playfair', 'mono', 'nunito', 'barlow', 'cormorant', 'marker']),
     fontSize: z.number().min(10).max(200),
     primaryColor: z.string(),
     activeColor: z.string(),
@@ -30,19 +30,19 @@ const schema = z.object({
     strokeWidth: z.number(),
     backgroundBox: z.boolean(),
     bgColor: z.string(),
-    bgOpacity: z.number().min(0).max(1),
+    bgOpacity: z.number().min(0).max(100), // Account for percentage values/slight float overflows
     bgRadius: z.number(),
     shadow: z.boolean(),
     glow: z.boolean(),
-    animation: z.enum(['none', 'pop', 'fade', 'slide_up', 'slide_down', 'typewriter', 'spring', 'bounce', 'karoke', 'zoom_in']),
-    animationDuration: z.number().min(0).max(1),
+    animation: z.enum(['none', 'pop', 'slideUp', 'fade', 'bounce', 'blur']), // MATCH SubtitleAnimation type
+    animationDuration: z.number().min(0).max(100),
     position: z.number().min(0).max(100),
     alignment: z.enum(['left', 'center', 'right']),
     maxWordsPerLine: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     uppercase: z.boolean(),
   }),
   platforms: z.array(z.string()).min(1),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().datetime().nullable().optional(),
   generationMode: z.enum(['image_stack', 'ai_video']).default('image_stack'),
   aiAudioMode: z.enum(['keep_ai', 'replace']).optional(),
   script: z

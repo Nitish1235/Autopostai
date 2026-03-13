@@ -3,7 +3,9 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-const DODO_API_BASE_URL = 'https://api.dodopayments.com/v1'
+const DODO_API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'https://test.dodopayments.com' 
+  : 'https://live.dodopayments.com'
 const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY ?? ''
 
 // ── POST — Open Billing Portal ───────────────────────

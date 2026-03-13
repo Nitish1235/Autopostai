@@ -2,7 +2,9 @@ import { createHmac, timingSafeEqual } from 'crypto'
 import type { Plan } from '@/types'
 
 // ── Config ────────────────────────────────────────────
-const BASE_URL = 'https://api.dodopayments.com/v1'
+const BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'https://test.dodopayments.com' 
+  : 'https://live.dodopayments.com'
 const API_KEY = process.env.DODO_PAYMENTS_API_KEY ?? ''
 
 // ── HTTP Helper ───────────────────────────────────────
