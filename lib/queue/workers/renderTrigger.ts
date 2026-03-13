@@ -92,7 +92,7 @@ export async function checkAndTriggerRender(
   })
 
   // Enqueue render job via QStash
-  await enqueueJob('/jobs/render', {
+  await enqueueJob('/api/jobs/render', {
     videoId,
     userId,
     format: video.format,

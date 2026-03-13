@@ -9,8 +9,8 @@ const qstash = new Client({
   baseUrl: process.env.QSTASH_URL, // Set this in GCP to https://qstash.upstash.io or your specific region URL to avoid Anycast EU routing issues
 })
 
-// The public URL of the autopost-worker Cloud Run service
-const WORKER_URL = process.env.WORKER_SERVICE_URL || 'http://localhost:8080'
+// The public URL of the Next.js app (job handlers are /api/jobs/* routes in the same app)
+const WORKER_URL = process.env.WORKER_SERVICE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /**
  * Enqueue a job by publishing it to a worker endpoint via QStash.

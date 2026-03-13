@@ -177,7 +177,7 @@ function CreateWizard() {
         setVideoId(newVideoId)
         toast({ message: 'Video creation started!', type: 'success' })
 
-        // Poll real video status every 3 seconds
+        // Poll real video status every 3 seconds, timeout after 10 minutes
         const STAGE_LABELS: Record<string, string> = {
           script: 'Generating script...',
           images: 'Generating images...',
@@ -187,7 +187,21 @@ function CreateWizard() {
           ai_generate: 'Generating AI video...',
         }
 
+        const MAX_POLLS = 200 // 200 * 3s = 10 minutes
+        let pollCount = 0
+
         const poll = setInterval(async () => {
+          pollCount++
+
+          // Safety timeout: stop after 10 minutes
+          if (pollCount > MAX_POLLS) {
+            clearInterval(poll)
+            setIsGenerating(false)
+            setGenerationStage('Timed out')
+            toast({ message: 'Video generation is taking too long. Check your dashboard for updates.', type: 'error' })
+            return
+          }
+
           try {
             const statusRes = await fetch(`/api/video/${newVideoId}/status`)
             const statusData = await statusRes.json()

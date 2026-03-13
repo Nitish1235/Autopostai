@@ -112,7 +112,7 @@ export async function addVideoToQueue(
   }
 
   // Publish to worker's /jobs/script endpoint via QStash
-  await enqueueJob('/jobs/script', jobData as unknown as Record<string, unknown>, {
+  await enqueueJob('/api/jobs/script', jobData as unknown as Record<string, unknown>, {
     deduplicationId: `script-${videoId}`,
   })
 
@@ -167,7 +167,7 @@ export async function addAiVideoToQueue(
   jobData: AiVideoJobData
 ): Promise<void> {
   // Publish to worker's /jobs/ai-video endpoint via QStash
-  await enqueueJob('/jobs/ai-video', jobData as unknown as Record<string, unknown>, {
+  await enqueueJob('/api/jobs/ai-video', jobData as unknown as Record<string, unknown>, {
     deduplicationId: `ai-video-${videoId}`,
   })
 

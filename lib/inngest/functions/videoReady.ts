@@ -86,7 +86,7 @@ export const onVideoReady = inngest.createFunction(
           )
           if (!connection?.accessToken) continue
 
-          await enqueueJob('/jobs/publish', {
+          await enqueueJob('/api/jobs/publish', {
             videoId: video.id,
             userId,
             platforms: [platform],
@@ -125,7 +125,7 @@ export const onVideoReady = inngest.createFunction(
             )
             if (!connection?.accessToken) continue
 
-            await enqueueJob('/jobs/publish', {
+            await enqueueJob('/api/jobs/publish', {
               videoId: video.id,
               userId,
               platforms: [platform],

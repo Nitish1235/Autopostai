@@ -110,7 +110,7 @@ export async function handleRenderJob(data: RenderJob) {
         userId,
         platforms: video.platforms,
       }
-      await enqueueJob('/jobs/publish', publishData as unknown as Record<string, unknown>, {
+      await enqueueJob('/api/jobs/publish', publishData as unknown as Record<string, unknown>, {
         deduplicationId: `publish-${videoId}`,
       })
       console.log(

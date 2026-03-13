@@ -81,7 +81,7 @@ export const scheduledPublish = inngest.createFunction(
 
             if (!connection?.accessToken) continue
 
-            await enqueueJob('/jobs/publish', {
+            await enqueueJob('/api/jobs/publish', {
               videoId: video.id,
               userId: video.userId,
               platforms: [platform],

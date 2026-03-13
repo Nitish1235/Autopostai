@@ -112,7 +112,7 @@ export async function handleScriptJob(data: ScriptJob) {
         totalSegments: scriptSegments.length,
       }
 
-      await enqueueJob('/jobs/image', imageJobData as unknown as Record<string, unknown>, {
+      await enqueueJob('/api/jobs/image', imageJobData as unknown as Record<string, unknown>, {
         deduplicationId: `image-${videoId}-${index}`,
       })
     }
@@ -131,7 +131,7 @@ export async function handleScriptJob(data: ScriptJob) {
         totalSegments: scriptSegments.length,
       }
 
-      await enqueueJob('/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
+      await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
         deduplicationId: `voice-${videoId}-${index}`,
       })
     }
