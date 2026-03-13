@@ -69,15 +69,16 @@ export async function createSubscription(
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer_id: customerId,
+    customer: {
+      customer_id: customerId,
+    },
     product_cart: [
       {
         product_id: planId,
         quantity: 1,
       },
     ],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
+    return_url: successUrl,
   })
   return {
     subscriptionId: result.id, // This is the payment session ID, but webhook handles the actual sub ID
@@ -121,15 +122,18 @@ export async function createOneTimePayment(
   successUrl: string,
   metadata?: Record<string, string>
 ): Promise<{ paymentId: string; checkoutUrl: string }> {
+  // Use /payments Checkout Session for one-time arbitrary amounts.
   const result = await dodoFetch<{
     id: string
     checkout_url: string
   }>('/payments', 'POST', {
-    customer_id: customerId,
-    amount,
+    customer: {
+      customer_id: customerId,
+    },
+    amount, // Passing raw amount (cents) for dynamic items if Dodo supports it, or it will throw 422 if Dodo forced product catalogs completely. 
     currency,
     description,
-    success_url: successUrl,
+    return_url: successUrl,
     ...(metadata && { metadata }),
   })
   return {
