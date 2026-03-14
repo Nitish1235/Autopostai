@@ -332,7 +332,7 @@ export async function renderVideo(params: {
       const escapedAssPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:')
       await execFFmpeg([
         '-i', muxedPath,
-        '-vf', `ass='${escapedAssPath}'`,
+        '-vf', `ass=${escapedAssPath}`,
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '22',
