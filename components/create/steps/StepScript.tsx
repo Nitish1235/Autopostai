@@ -75,9 +75,8 @@ function StepScript({
   const selectedSeg = script[selectedIndex]
 
   return (
-    <div className="flex gap-5">
-      {/* ── Left panel: segment list (55%) ── */}
-      <div className="flex-[0_0_55%]">
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full">
         <h2 className="text-[18px] font-bold text-[var(--text-primary)]">
           Review &amp; Edit Script
         </h2>
@@ -91,32 +90,15 @@ function StepScript({
               key={segment.id}
               onClick={() => setSelectedIndex(index)}
               className={cn(
-                'flex gap-3 items-start bg-[var(--bg-card)] border rounded-[10px] p-3 cursor-pointer transition-colors',
+                'flex gap-3 items-start bg-[var(--bg-card)] border rounded-[10px] p-4 cursor-pointer transition-colors relative',
                 selectedIndex === index
                   ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]/20'
                   : 'border-[var(--border)] hover:border-[var(--border-hover)]'
               )}
             >
-              {/* Thumbnail */}
-              <div
-                className="shrink-0 w-[48px] h-[68px] rounded-[6px] overflow-hidden relative"
-                style={{ background: gradient }}
-              >
-                {segment.imageUrl ? (
-                  <img
-                    src={segment.imageUrl}
-                    alt={`Segment ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon size={14} className="text-white/40" />
-                  </div>
-                )}
-                {/* Segment number badge */}
-                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--accent)] text-white text-[8px] font-bold flex items-center justify-center">
-                  {index + 1}
-                </span>
+              {/* Segment number badge */}
+              <div className="shrink-0 w-6 h-6 rounded-full bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-dim)] flex items-center justify-center text-[11px] font-bold mt-1">
+                {index + 1}
               </div>
 
               {/* Content */}
@@ -164,116 +146,6 @@ function StepScript({
           >
             <Plus size={15} /> Add segment
           </button>
-        </div>
-      </div>
-
-      {/* ── Right panel: image preview (45%) ── */}
-      <div className="flex-[0_0_45%]">
-        <div className="sticky top-[80px] space-y-4">
-          {/* Stats */}
-          <Card padding="md">
-            <h3 className="text-[12px] font-semibold text-[var(--text-primary)] mb-3">
-              Script Stats
-            </h3>
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { label: 'Words', value: totalWords },
-                { label: 'Duration', value: `~${totalDuration}s` },
-                { label: 'Segments', value: script.length },
-                { label: 'Images', value: script.filter((s) => s.imageUrl).length + '/' + script.length },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-[9px] text-[var(--text-dim)] uppercase tracking-wider">{label}</p>
-                  <p className="text-[15px] font-bold text-[var(--text-primary)]">{value}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Selected image preview */}
-          {selectedSeg && (
-            <Card padding="md">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[12px] font-semibold text-[var(--text-primary)]">
-                  Segment {selectedIndex + 1} Image
-                </p>
-                {!selectedSeg.imageUrl && (
-                  <span className="text-[9px] text-[var(--text-dim)] border border-[var(--border)] rounded-full px-2 py-0.5">
-                    Generated on render
-                  </span>
-                )}
-              </div>
-
-              {/* Main image display (9:16 aspect ratio) */}
-              <div
-                className="w-full rounded-[8px] overflow-hidden relative"
-                style={{ aspectRatio: '9/16', maxHeight: '220px', background: gradient }}
-              >
-                {selectedSeg.imageUrl ? (
-                  <img
-                    src={selectedSeg.imageUrl}
-                    alt={`Segment ${selectedIndex + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3">
-                    <ImageIcon size={22} className="text-white/30" />
-                    <p className="text-[10px] text-white/40 text-center leading-snug">
-                      {selectedSeg.imagePrompt}
-                    </p>
-                  </div>
-                )}
-                {/* Number badge */}
-                <span className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center justify-center backdrop-blur-sm">
-                  {selectedIndex + 1}
-                </span>
-              </div>
-            </Card>
-          )}
-
-          {/* Filmstrip — all segments */}
-          {script.length > 0 && (
-            <Card padding="md">
-              <p className="text-[12px] font-semibold text-[var(--text-primary)] mb-2">
-                All Scenes
-              </p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {script.map((seg, i) => (
-                  <button
-                    key={seg.id}
-                    onClick={() => setSelectedIndex(i)}
-                    className={cn(
-                      'shrink-0 relative rounded-[5px] overflow-hidden transition-all cursor-pointer',
-                      selectedIndex === i
-                        ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-primary)]'
-                        : 'opacity-60 hover:opacity-90'
-                    )}
-                    style={{ width: 36, height: 52, background: gradient }}
-                  >
-                    {seg.imageUrl ? (
-                      <img
-                        src={seg.imageUrl}
-                        alt={`Seg ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon size={10} className="text-white/30" />
-                      </div>
-                    )}
-                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[7px] font-bold text-center py-px">
-                      {i + 1}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {script.every((s) => !s.imageUrl) && (
-                <p className="text-[10px] text-[var(--text-dim)] mt-2 text-center">
-                  Images generate automatically when you click "Generate Video" →
-                </p>
-              )}
-            </Card>
-          )}
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ function PhoneMockup({
   return (
     <div
       className={cn(
-        'relative w-[220px] rounded-[38px] border-[8px] border-[#1C1C1E] overflow-hidden shadow-float',
+        'relative w-[300px] rounded-[38px] border-[8px] border-[#1C1C1E] overflow-hidden shadow-float',
         className
       )}
       style={{ aspectRatio: '9/16' }}
