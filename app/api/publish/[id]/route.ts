@@ -133,7 +133,7 @@ export async function POST(
       data: updateData,
     })
 
-    await enqueueJob('/jobs/publish', {
+    await enqueueJob('/api/jobs/publish', {
       videoId,
       userId: userId,
       platforms: platformsToPublish,

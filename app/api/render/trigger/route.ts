@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     })
 
     // Add to render queue
-    await enqueueJob('/jobs/render', {
+    await enqueueJob('/api/jobs/render', {
       videoId,
       userId: userId,
       format: video.format,

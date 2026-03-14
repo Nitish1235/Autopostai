@@ -110,7 +110,7 @@ export async function POST(
         })
 
         // 6. Add to publish queue (single platform)
-        await enqueueJob('/jobs/publish', {
+        await enqueueJob('/api/jobs/publish', {
             videoId,
             userId: userId,
             platforms: [platform],
