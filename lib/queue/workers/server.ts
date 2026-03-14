@@ -40,6 +40,13 @@ const handlers: Record<string, (data: any) => Promise<any>> = {
   '/jobs/render': handleRenderJob,
   '/jobs/publish': handlePublishJob,
   '/jobs/ai-video': handleAiVideoJob,
+  // Also accept /api/jobs/* paths (from Next.js app dispatch)
+  '/api/jobs/script': handleScriptJob,
+  '/api/jobs/image': handleImageJob,
+  '/api/jobs/voice': handleVoiceJob,
+  '/api/jobs/render': handleRenderJob,
+  '/api/jobs/publish': handlePublishJob,
+  '/api/jobs/ai-video': handleAiVideoJob,
 }
 
 // ── HTTP Server ──────────────────────────────────────

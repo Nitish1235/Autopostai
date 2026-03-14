@@ -140,7 +140,7 @@ steps:
       - '3'
       - '--timeout'
       - '600'
-      - '--no-allow-unauthenticated'
+      - '--allow-unauthenticated'
       - '--set-cloudsql-instances'
       - '${_CLOUDSQL_INSTANCE}'
 

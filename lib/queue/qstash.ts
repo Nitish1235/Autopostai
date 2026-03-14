@@ -21,8 +21,18 @@ export async function enqueueJob(
   data: Record<string, unknown>,
   options?: { retries?: number; deduplicationId?: string }
 ) {
+  const targetUrl = `${WORKER_URL}${endpoint}`
+
+  // Debug: log the full URL so we can see in Cloud Run logs what QStash targets
+  console.log(`[qstash] Publishing job to: ${targetUrl}`)
+  console.log(`[qstash] WORKER_URL=${WORKER_URL} (from WORKER_SERVICE_URL=${process.env.WORKER_SERVICE_URL ?? 'NOT SET'}, NEXT_PUBLIC_APP_URL=${process.env.NEXT_PUBLIC_APP_URL ?? 'NOT SET'})`)
+
+  if (WORKER_URL.includes('localhost')) {
+    console.error(`[qstash] ⚠️ WARNING: WORKER_URL is localhost — QStash cannot deliver to localhost! Set WORKER_SERVICE_URL in Cloud Run env vars.`)
+  }
+
   const response = await qstash.publishJSON({
-    url: `${WORKER_URL}${endpoint}`,
+    url: targetUrl,
     body: data,
     retries: options?.retries ?? 3,
     deduplicationId: options?.deduplicationId,
