@@ -98,6 +98,21 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             }
 
+            // --- ADMIN BYPASS ---
+            const { clerkClient } = await import('@clerk/nextjs/server')
+            const client = await clerkClient()
+            const user = await client.users.getUser(userId)
+            const email = user?.emailAddresses?.[0]?.emailAddress
+            const isAdmin = email === 'nitishjain135@gmail.com'
+
+            if (isAdmin) {
+                const response = NextResponse.next()
+                response.headers.set('X-RateLimit-Limit', 'Unlimited (Admin)')
+                response.headers.set('X-RateLimit-Remaining', 'Unlimited')
+                return response
+            }
+            // --------------------
+
             const { allowed, remaining } = await checkRateLimit(
                 userId,
                 route.replace(/\//g, ':'),

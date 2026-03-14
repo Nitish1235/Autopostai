@@ -58,9 +58,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Rate limiting: max 5 per user per hour (skip if Redis not configured)
+    // 3. Rate limiting: max 5 per user per hour (skip if Redis not configured or user is admin)
     const redis = await getRedis()
-    if (redis) {
+    const { currentUser } = await import('@clerk/nextjs/server')
+    const user = await currentUser()
+    const email = user?.emailAddresses[0]?.emailAddress
+    const isAdmin = email === 'nitishjain135@gmail.com'
+
+    if (redis && !isAdmin) {
       try {
         const rateLimitKey = `script_limit:${userId}`
         const currentCount = await redis.incr(rateLimitKey)
