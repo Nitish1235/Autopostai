@@ -1,6 +1,6 @@
 // ── Main Video Render Orchestrator ────────────────────
 
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs'
 import path from 'path'
@@ -38,15 +38,13 @@ import {
 
 import type { ScriptSegment, SubtitleConfig } from '@/types'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 // ── FFmpeg Execution Helper ──────────────────────────
 
 export async function execFFmpeg(args: string[]): Promise<void> {
-  const command = `ffmpeg ${args.join(' ')}`
-
   try {
-    const { stdout, stderr } = await execAsync(command, {
+    const { stdout, stderr } = await execFileAsync('ffmpeg', args, {
       maxBuffer: 50 * 1024 * 1024,
       timeout: 600000, // 10 minute timeout per step
     })
