@@ -3,14 +3,15 @@ import { v4 as uuidv4 } from 'uuid'
 import { unlink } from 'fs/promises'
 
 // ── GCS Client Setup ──────────────────────────────────
-// On Cloud Run: uses Application Default Credentials (ADC) automatically
-// Locally: uses explicit GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY env vars
-const storage = process.env.GCS_CLIENT_EMAIL
+// On Cloud Run (detected via K_SERVICE), ALWAYS use Application Default Credentials.
+// Locally, use explicit GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY env vars if provided.
+const isCloudRun = !!process.env.K_SERVICE
+const storage = (!isCloudRun && process.env.GCS_CLIENT_EMAIL && process.env.GCS_PRIVATE_KEY)
   ? new Storage({
       projectId: process.env.GCS_PROJECT_ID,
       credentials: {
         client_email: process.env.GCS_CLIENT_EMAIL,
-        private_key: process.env.GCS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: process.env.GCS_PRIVATE_KEY.replace(/\\n/g, '\n'),
       },
     })
   : new Storage({ projectId: process.env.GCS_PROJECT_ID })

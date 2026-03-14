@@ -14,6 +14,8 @@ const VOICE_MAP: Record<string, string> = {
   aria: 'Liv',
   marcus: 'Dan',
   elena: 'Scarlett',
+  emily: 'Scarlett',
+  Emily: 'Scarlett',
   // Native V8 voices — pass through as-is
   autumn: 'Autumn',
   Autumn: 'Autumn',
