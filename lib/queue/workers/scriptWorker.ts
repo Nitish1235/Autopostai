@@ -114,6 +114,7 @@ export async function handleScriptJob(data: ScriptJob) {
 
       await enqueueJob('/api/jobs/image', imageJobData as unknown as Record<string, unknown>, {
         deduplicationId: `image-${videoId}-${index}`,
+        delay: index * 2, // stagger by 2 seconds per segment to avoid Runware timeouts
       })
     }
 
@@ -133,6 +134,7 @@ export async function handleScriptJob(data: ScriptJob) {
 
       await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
         deduplicationId: `voice-${videoId}-${index}`,
+        delay: index * 3, // stagger by 3 seconds per segment to avoid UnrealSpeech 429 rate limits
       })
     }
 

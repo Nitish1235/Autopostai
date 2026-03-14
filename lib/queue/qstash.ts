@@ -19,7 +19,7 @@ const WORKER_URL = process.env.WORKER_SERVICE_URL || process.env.NEXT_PUBLIC_APP
 export async function enqueueJob(
   endpoint: string,
   data: Record<string, unknown>,
-  options?: { retries?: number; deduplicationId?: string }
+  options?: { retries?: number; deduplicationId?: string; delay?: number }
 ) {
   const targetUrl = `${WORKER_URL}${endpoint}`
 
@@ -34,6 +34,7 @@ export async function enqueueJob(
   const response = await qstash.publishJSON({
     url: targetUrl,
     body: data,
+    delay: options?.delay,
     retries: options?.retries ?? 3,
     deduplicationId: options?.deduplicationId,
   })
