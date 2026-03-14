@@ -24,8 +24,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install FFmpeg for video rendering and audio muxing, OpenSSL for Prisma
-RUN apk add --no-cache ffmpeg openssl
+# Install FFmpeg for video rendering, OpenSSL for Prisma, and Fonts for ASS Subtitles
+RUN apk add --no-cache ffmpeg openssl fontconfig ttf-dejavu ttf-liberation font-noto font-noto-cjk
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
