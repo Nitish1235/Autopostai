@@ -53,13 +53,13 @@ export function buildAudioMixCommand(params: {
 
   const fadeStart = Math.max(0, totalDuration - 2)
 
-  const filterComplex =
-    `[0:a]volume=${voiceVolume}[voice];` +
-    `[1:a]volume=${musicVolume},` +
-    `aloop=loop=-1:size=2e+09,` +
-    `atrim=duration=${totalDuration},` +
-    `afade=t=out:st=${fadeStart.toFixed(2)}:d=2[music];` +
-    `[voice][music]amix=inputs=2:duration=first[aout]`
+  // Use a simpler, highly stable filtergraph for voice + background music.
+  // The background music loops indefinitely. amix naturally terminates when the shortest input (voice) ends
+  // because we use `duration=shortest` instead of `duration=first`.
+  const filterComplex = 
+    `[0:a]volume=${voiceVolume}[v];` +
+    `[1:a]volume=${musicVolume},aloop=loop=-1:size=2147483647,afade=t=out:st=${fadeStart.toFixed(2)}:d=2[m];` +
+    `[v][m]amix=inputs=2:duration=shortest[aout]`
 
   return [
     '-i', voicePath,

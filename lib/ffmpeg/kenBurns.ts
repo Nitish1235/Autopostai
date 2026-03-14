@@ -159,6 +159,8 @@ export function buildImageClipCommand(params: {
     kenBurnsFilter,
     'scale=1080:1920',
     'setsar=1',
+    'settb=1/30',
+    'format=yuv420p',
   ].join(',')
 
   return [
