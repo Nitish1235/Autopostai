@@ -30,6 +30,18 @@ interface RunwareImageResult {
   taskType: string
 }
 
+// ── Response Normalizer ──────────────────────────────
+// ws-api.runware.ai may return: an array, a single object, or { data: [...] }
+function parseRunwareMessages(data: WebSocket.Data): Record<string, unknown>[] {
+  const parsed = JSON.parse(data.toString())
+  if (Array.isArray(parsed)) return parsed
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.data)) return parsed.data
+    return [parsed]
+  }
+  return []
+}
+
 // ── Generate Single Image ────────────────────────────
 
 export async function generateImage(params: {
@@ -62,7 +74,7 @@ export async function generateImage(params: {
 
     ws.on('message', (data: WebSocket.Data) => {
       try {
-        const messages: Record<string, unknown>[] = JSON.parse(data.toString())
+        const messages = parseRunwareMessages(data)
 
         for (const msg of messages) {
           if (msg.taskType === 'authentication') {
@@ -192,7 +204,7 @@ export async function generateImageBatch(params: {
 
     ws.on('message', (data: WebSocket.Data) => {
       try {
-        const messages: Record<string, unknown>[] = JSON.parse(data.toString())
+        const messages = parseRunwareMessages(data)
 
         for (const msg of messages) {
           // Auth success — send ALL tasks at once
@@ -307,7 +319,7 @@ export async function upscaleImage(imageUrl: string): Promise<string> {
 
     ws.on('message', (data: WebSocket.Data) => {
       try {
-        const messages: Record<string, unknown>[] = JSON.parse(data.toString())
+        const messages = parseRunwareMessages(data)
 
         for (const msg of messages) {
           if (msg.taskType === 'authentication') {
