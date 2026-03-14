@@ -7,12 +7,30 @@ const API_KEY = process.env.UNREAL_SPEECH_API_KEY!
 
 // ── Voice Mapping ────────────────────────────────────
 const VOICE_MAP: Record<string, string> = {
+  // Internal aliases → UnrealSpeech V8 canonical names
   ryan: 'Dan',
   sarah: 'Scarlett',
   james: 'Will',
   aria: 'Liv',
   marcus: 'Dan',
   elena: 'Scarlett',
+  // Native V8 voices — pass through as-is
+  autumn: 'Autumn',
+  Autumn: 'Autumn',
+  noah: 'Noah',
+  Noah: 'Noah',
+  jasper: 'Jasper',
+  Jasper: 'Jasper',
+  scarlett: 'Scarlett',
+  Scarlett: 'Scarlett',
+  melody: 'Melody',
+  Melody: 'Melody',
+  dan: 'Dan',
+  Dan: 'Dan',
+  will: 'Will',
+  Will: 'Will',
+  liv: 'Liv',
+  Liv: 'Liv',
 }
 
 // ── Interfaces ───────────────────────────────────────

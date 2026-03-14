@@ -3,15 +3,23 @@ import { v4 as uuidv4 } from 'uuid'
 import { unlink } from 'fs/promises'
 
 // ── GCS Client Setup ──────────────────────────────────
-const storage = new Storage({
-  projectId: process.env.GCS_PROJECT_ID,
-  credentials: {
-    client_email: process.env.GCS_CLIENT_EMAIL,
-    private_key: process.env.GCS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
-})
+// On Cloud Run: uses Application Default Credentials (ADC) automatically
+// Locally: uses explicit GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY env vars
+const storage = process.env.GCS_CLIENT_EMAIL
+  ? new Storage({
+      projectId: process.env.GCS_PROJECT_ID,
+      credentials: {
+        client_email: process.env.GCS_CLIENT_EMAIL,
+        private_key: process.env.GCS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+    })
+  : new Storage({ projectId: process.env.GCS_PROJECT_ID })
 
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME ?? 'autopost-ai-media')
+const BUCKET_NAME = process.env.GCS_BUCKET_NAME ?? 'autopost-ai-media'
+const bucket = storage.bucket(BUCKET_NAME)
+
+// Public URL: use env var if set, otherwise construct from bucket name
+const GCS_PUBLIC_URL = process.env.GCS_PUBLIC_URL ?? `https://storage.googleapis.com/${BUCKET_NAME}`
 
 // ── Upload buffer to GCS ──────────────────────────────
 export async function uploadBuffer(
@@ -27,7 +35,7 @@ export async function uploadBuffer(
         cacheControl: 'public, max-age=31536000',
       },
     })
-    return `${process.env.GCS_PUBLIC_URL}/${destination}`
+    return `${GCS_PUBLIC_URL}/${destination}`
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown upload error'
@@ -59,7 +67,7 @@ export async function uploadFromPath(
       // Non-critical: local file cleanup failure
     }
 
-    return `${process.env.GCS_PUBLIC_URL}/${destination}`
+    return `${GCS_PUBLIC_URL}/${destination}`
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown upload error'

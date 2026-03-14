@@ -2,7 +2,7 @@ import WebSocket from 'ws'
 import { randomUUID } from 'crypto'
 
 // ── Config ───────────────────────────────────────────
-const RUNWARE_WS_URL = 'wss://ws.runware.ai/v1'
+const RUNWARE_WS_URL = 'wss://ws-api.runware.ai/v1'
 const API_KEY = process.env.RUNWARE_API_KEY!
 
 // ── Interfaces ───────────────────────────────────────
