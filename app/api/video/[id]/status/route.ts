@@ -95,7 +95,8 @@ export async function GET(
         break
       }
       case 'rendering':
-        progress = 75
+        // Use the granular progress updated by the FFmpeg worker (58 to 96)
+        progress = renderJob?.progress ?? 75
         break
       case 'ready':
       case 'scheduled':
