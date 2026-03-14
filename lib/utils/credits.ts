@@ -1,6 +1,19 @@
 import { prisma } from '@/lib/db/prisma'
 import { PLANS } from '@/lib/utils/constants'
 
+// ── Admin users get unlimited credits ─────────────────
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'nitishjain135@gmail.com')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+
+export async function isAdminUser(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  })
+  return !!user && ADMIN_EMAILS.includes(user.email.toLowerCase())
+}
+
 // ── Check Credits ─────────────────────────────────────
 
 export async function checkCredits(
@@ -17,6 +30,7 @@ export async function checkCredits(
       credits: true,
       creditsUsed: true,
       plan: true,
+      email: true,
     },
   })
 
@@ -24,9 +38,12 @@ export async function checkCredits(
     throw new Error(`User not found: ${userId}`)
   }
 
+  // Admin users always have credits
+  const isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase())
+
   return {
-    hasCredits: user.credits > 0,
-    credits: user.credits,
+    hasCredits: isAdmin || user.credits > 0,
+    credits: isAdmin ? 9999 : user.credits,
     creditsUsed: user.creditsUsed,
     plan: user.plan,
   }
@@ -39,6 +56,12 @@ export async function deductCredit(
   videoId: string,
   description: string = 'Video generation'
 ): Promise<void> {
+  // Admin users skip credit deduction
+  if (await isAdminUser(userId)) {
+    console.log(`[credits] Admin user ${userId} — skipping credit deduction`)
+    return
+  }
+
   // Atomic guard: only decrements if credits > 0 — no double-spend
   const result = await prisma.user.updateMany({
     where: {

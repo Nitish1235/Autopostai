@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma'
 import { AI_VIDEO_LIMITS } from '@/lib/utils/constants'
+import { isAdminUser } from '@/lib/utils/credits'
 
 // ── Check AI Video Credits ────────────────────────────
 
@@ -11,6 +12,11 @@ export async function checkAiVideoCredits(
     creditsUsed: number
     plan: string
 }> {
+    // Admin users always have unlimited AI video credits
+    if (await isAdminUser(userId)) {
+        return { hasCredits: true, credits: 9999, creditsUsed: 0, plan: 'admin' }
+    }
+
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -39,6 +45,12 @@ export async function deductAiVideoCredit(
     videoId: string,
     description: string = 'AI Video generation'
 ): Promise<void> {
+    // Admin users skip AI video credit deduction
+    if (await isAdminUser(userId)) {
+        console.log(`[aiCredits] Admin user ${userId} — skipping AI video credit deduction`)
+        return
+    }
+
     // Atomic guard: only decrements if aiVideoCredits > 0
     const result = await prisma.user.updateMany({
         where: {
