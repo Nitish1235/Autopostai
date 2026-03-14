@@ -61,7 +61,7 @@ export function buildKenBurnsFilter(config: KenBurnsConfig): string {
   switch (config.motion) {
     case 'zoom_in':
       return (
-        `zoompan=z='min(zoom+0.0008,1.12)':` +
+        `zoompan=z='min(zoom+0.0008\\,1.12)':` +
         `x='iw/2-(iw/zoom/2)':` +
         `y='ih/2-(ih/zoom/2)':` +
         `d=${frames}:s=1080x1920:fps=${config.fps}`
@@ -109,7 +109,7 @@ export function buildKenBurnsFilter(config: KenBurnsConfig): string {
 
     case 'diagonal_drift':
       return (
-        `zoompan=z='min(zoom+0.0005,1.08)':` +
+        `zoompan=z='min(zoom+0.0005\\,1.08)':` +
         `x='(iw*0.05/${frames})*on':` +
         `y='(ih*0.05/${frames})*on':` +
         `d=${frames}:s=1080x1920:fps=${config.fps}`
@@ -117,7 +117,7 @@ export function buildKenBurnsFilter(config: KenBurnsConfig): string {
 
     case 'zoom_rotate':
       return (
-        `zoompan=z='min(zoom+0.0007,1.10)':` +
+        `zoompan=z='min(zoom+0.0007\\,1.10)':` +
         `x='iw/2-(iw/zoom/2)':` +
         `y='ih/2-(ih/zoom/2)':` +
         `d=${frames}:s=1080x1920:fps=${config.fps}`
@@ -125,7 +125,7 @@ export function buildKenBurnsFilter(config: KenBurnsConfig): string {
 
     default:
       return (
-        `zoompan=z='min(zoom+0.0008,1.12)':` +
+        `zoompan=z='min(zoom+0.0008\\,1.12)':` +
         `x='iw/2-(iw/zoom/2)':` +
         `y='ih/2-(ih/zoom/2)':` +
         `d=${frames}:s=1080x1920:fps=${config.fps}`
