@@ -51,26 +51,32 @@ export async function handleImageJob(data: ImageJob) {
     )
     const gcsUrl = await uploadBuffer(imageBuffer, gcsKey, 'image/webp')
 
-    // 4. Update video imageUrls array at correct index
-    const video = await prisma.video.findUnique({
-      where: { id: videoId },
-      select: { imageUrls: true },
-    })
+    // 4. Update video imageUrls array atomically using a row lock
+    const updatedVideo = await prisma.$transaction(async (tx) => {
+      // Lock the Video row to prevent concurrent workers from overwriting array updates
+      await tx.$executeRaw`SELECT id FROM "Video" WHERE id = ${videoId} FOR UPDATE`
 
-    const currentUrls = video?.imageUrls ?? []
-    const newUrls = [...currentUrls]
-    while (newUrls.length <= segmentIndex) {
-      newUrls.push('')
-    }
-    newUrls[segmentIndex] = gcsUrl
+      const video = await tx.video.findUnique({
+        where: { id: videoId },
+        select: { imageUrls: true },
+      })
 
-    await prisma.video.update({
-      where: { id: videoId },
-      data: { imageUrls: newUrls },
+      const currentUrls = video?.imageUrls ?? []
+      const newUrls = [...currentUrls]
+      while (newUrls.length <= segmentIndex) {
+        newUrls.push('')
+      }
+      newUrls[segmentIndex] = gcsUrl
+
+      return tx.video.update({
+        where: { id: videoId },
+        data: { imageUrls: newUrls },
+        select: { imageUrls: true },
+      })
     })
 
     // 5. Calculate and update progress
-    const completedCount = newUrls.filter(
+    const completedCount = updatedVideo.imageUrls.filter(
       (url) => !!url && url.length > 0
     ).length
     const progress = Math.round(20 + (completedCount / totalSegments) * 35)

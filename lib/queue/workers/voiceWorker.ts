@@ -32,38 +32,43 @@ export async function handleVoiceJob(data: VoiceJob) {
       segmentIndex,
     })
 
-    // 2. Update segment in Video.script JSON
-    const video = await prisma.video.findUnique({
-      where: { id: videoId },
-      select: { script: true },
-    })
+    // 2. Update segment in Video.script JSON atomically using a row lock
+    const updatedVideo = await prisma.$transaction(async (tx) => {
+      // Lock the Video row to prevent concurrent workers from overwriting json updates
+      await tx.$executeRaw`SELECT id FROM "Video" WHERE id = ${videoId} FOR UPDATE`
 
-    if (!video?.script) {
-      throw new Error(`Video script not found for ${videoId}`)
-    }
+      const video = await tx.video.findUnique({
+        where: { id: videoId },
+        select: { script: true },
+      })
 
-    const script = video.script as unknown as ScriptSegment[]
-    const updatedScript = script.map((seg, idx) => {
-      if (idx === segmentIndex) {
-        return {
-          ...seg,
-          audioUrl: result.gcsUrl,
-          wordTimestamps: result.words,
-          duration: result.duration,
-        }
+      if (!video?.script) {
+        throw new Error(`Video script not found for ${videoId}`)
       }
-      return seg
-    })
 
-    await prisma.video.update({
-      where: { id: videoId },
-      data: {
-        script: updatedScript as any,
-      },
+      const script = video.script as unknown as ScriptSegment[]
+      const updatedScript = script.map((seg, idx) => {
+        if (idx === segmentIndex) {
+          return {
+            ...seg,
+            audioUrl: result.gcsUrl,
+            wordTimestamps: result.words,
+            duration: result.duration,
+          }
+        }
+        return seg
+      })
+
+      return tx.video.update({
+        where: { id: videoId },
+        data: { script: updatedScript as any },
+        select: { script: true },
+      })
     })
 
     // 3. Log progress
-    const completedVoice = updatedScript.filter(
+    const scriptResult = updatedVideo.script as unknown as ScriptSegment[]
+    const completedVoice = scriptResult.filter(
       (seg) => !!seg.audioUrl && seg.audioUrl.length > 0
     ).length
 
