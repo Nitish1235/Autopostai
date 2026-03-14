@@ -30,8 +30,9 @@ export async function uploadBuffer(
   try {
     const file = bucket.file(destination)
     await file.save(buffer, {
-      contentType,
+      resumable: false,
       metadata: {
+        contentType,
         cacheControl: 'public, max-age=31536000',
       },
     })
@@ -52,11 +53,10 @@ export async function uploadFromPath(
   try {
     await bucket.upload(localPath, {
       destination,
-      contentType,
+      resumable: false,
       metadata: {
-        metadata: {
-          cacheControl: 'public, max-age=31536000',
-        },
+        contentType,
+        cacheControl: 'public, max-age=31536000',
       },
     })
 
