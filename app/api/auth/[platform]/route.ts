@@ -28,16 +28,23 @@ export async function GET(
 
         const { platform } = await params
 
+        // Use the APP_URL for the callback instead of hardcoding localhost
+        const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
         // Call PostForMe API to generate a platform-specific OAuth URL
-        // This returns a URL that takes the user directly to the platform's login
-        // (e.g., Instagram login, YouTube consent) — NOT PostForMe's dashboard
+        // We MUST pass state (userId) and our callback URL so PostForMe
+        // knows where to send the user back after they authenticate on TikTok/Instagram.
         const response = await fetch(`${POSTFORME_API_URL}/social-accounts/auth-url`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${POSTFORME_API_KEY}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ platform }),
+            body: JSON.stringify({ 
+                platform,
+                state: userId, // extremely important: returned to our callback
+                redirect_url: `${APP_URL}/api/platforms/postforme/callback`
+            }),
         })
 
         if (!response.ok) {

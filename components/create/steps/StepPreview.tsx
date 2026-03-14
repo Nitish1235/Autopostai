@@ -82,10 +82,11 @@ function StepPreview({
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 items-start">
       {/* Left - Video preview (55%) */}
-      <div className="flex-[0_0_55%] flex justify-center">
-        <PhoneMockup platform="tiktok">
+      <div className="flex-[0_0_55%] flex items-center justify-center p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] min-h-[650px]">
+        <div className="h-[600px] w-auto">
+          <PhoneMockup platform="tiktok" className="h-full w-auto">
           {isGenerating ? (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[var(--bg-primary)]">
               {/* Progress ring */}
@@ -132,7 +133,8 @@ function StepPreview({
               </p>
             </div>
           )}
-        </PhoneMockup>
+          </PhoneMockup>
+        </div>
       </div>
 
       {/* Right - Publish controls (45%) */}
