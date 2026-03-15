@@ -118,28 +118,25 @@ export async function handleScriptJob(data: ScriptJob) {
       })
     }
 
-    // 7. Queue voice generation jobs via QStash
-    for (let index = 0; index < scriptSegments.length; index++) {
-      const segment = scriptSegments[index]
+    // 7. Queue voice generation job via QStash
+    // Create one single master audio track to avoid FFmpeg concatenation desyncs
+    const masterNarration = scriptSegments.map((s) => s.narration).join(' ')
 
-      const voiceJobData: VoiceJob = {
-        videoId,
-        userId,
-        segmentIndex: index,
-        narration: segment.narration,
-        voiceId,
-        voiceSpeed,
-        totalSegments: scriptSegments.length,
-      }
-
-      await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
-        deduplicationId: `voice-${videoId}-${index}`,
-        delay: index * 3, // stagger by 3 seconds per segment to avoid UnrealSpeech 429 rate limits
-      })
+    const voiceJobData: VoiceJob = {
+      videoId,
+      userId,
+      narration: masterNarration,
+      voiceId,
+      voiceSpeed,
+      totalSegments: scriptSegments.length,
     }
 
+    await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
+      deduplicationId: `voice-${videoId}-master`,
+    })
+
     console.log(
-      `[scriptWorker] Script done. Queued ${scriptSegments.length} image + voice jobs.`
+      `[scriptWorker] Script done. Queued ${scriptSegments.length} image jobs and 1 master voice job.`
     )
 
     return { success: true, segmentCount: scriptSegments.length }

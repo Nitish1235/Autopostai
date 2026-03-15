@@ -2,7 +2,6 @@ import { generateVoiceAndUpload } from '@/lib/api/unrealSpeech'
 import { prisma } from '@/lib/db/prisma'
 import { checkAndTriggerRender } from '@/lib/queue/workers/renderTrigger'
 import type { VoiceJob } from '@/lib/queue/videoQueue'
-import type { ScriptSegment } from '@/types'
 
 // ── Voice Generation Handler ─────────────────────────
 
@@ -10,79 +9,44 @@ export async function handleVoiceJob(data: VoiceJob) {
   const {
     videoId,
     userId,
-    segmentIndex,
     narration,
     voiceId,
     voiceSpeed,
-    totalSegments,
   } = data
 
   console.log(
-    `[voiceWorker] Generating voice for segment ${segmentIndex} of ${videoId}`
+    `[voiceWorker] Generating master voice track for ${videoId}`
   )
 
   try {
-    // 1. Generate voice and upload to GCS
+    // 1. Generate voice and upload to GCS (master track)
     const result = await generateVoiceAndUpload({
       text: narration,
       voiceId,
       speed: voiceSpeed,
       userId,
       videoId,
-      segmentIndex,
     })
 
-    // 2. Update segment in Video.script JSON atomically using a row lock
-    const updatedVideo = await prisma.$transaction(async (tx) => {
-      // Lock the Video row to prevent concurrent workers from overwriting json updates
-      await tx.$executeRaw`SELECT id FROM "Video" WHERE id = ${videoId} FOR UPDATE`
-
-      const video = await tx.video.findUnique({
-        where: { id: videoId },
-        select: { script: true },
-      })
-
-      if (!video?.script) {
-        throw new Error(`Video script not found for ${videoId}`)
-      }
-
-      const script = video.script as unknown as ScriptSegment[]
-      const updatedScript = script.map((seg, idx) => {
-        if (idx === segmentIndex) {
-          return {
-            ...seg,
-            audioUrl: result.gcsUrl,
-            wordTimestamps: result.words,
-            duration: result.duration,
-          }
-        }
-        return seg
-      })
-
-      return tx.video.update({
-        where: { id: videoId },
-        data: { script: updatedScript as any },
-        select: { script: true },
-      })
+    // 2. Update Video with master audio details
+    await prisma.video.update({
+      where: { id: videoId },
+      data: {
+        masterAudioUrl: result.gcsUrl,
+        masterWordTimestamps: result.words as any,
+      },
     })
-
-    // 3. Log progress
-    const scriptResult = updatedVideo.script as unknown as ScriptSegment[]
-    const completedVoice = scriptResult.filter(
-      (seg) => !!seg.audioUrl && seg.audioUrl.length > 0
-    ).length
 
     console.log(
-      `[voiceWorker] Voice ${segmentIndex} done for ${videoId} (${completedVoice}/${totalSegments})`
+      `[voiceWorker] Master voice done for ${videoId}`
     )
 
-    // 4. Check if all assets ready to trigger render
+    // 3. Check if all assets ready to trigger render
     await checkAndTriggerRender(videoId, userId)
 
     return {
       success: true,
       gcsUrl: result.gcsUrl,
-      segmentIndex,
       duration: result.duration,
     }
   } catch (error) {
@@ -90,32 +54,26 @@ export async function handleVoiceJob(data: VoiceJob) {
       error instanceof Error ? error.message : 'Unknown error'
 
     console.error(
-      `[voiceWorker] Voice generation failed for segment ${segmentIndex} of ${videoId}: ${message}`
+      `[voiceWorker] Master voice generation failed for ${videoId}: ${message}`
     )
 
-    // Try to mark the segment as failed in script JSON
+    // Try to mark the video processing as failed
     try {
-      const video = await prisma.video.findUnique({
+      await prisma.video.update({
         where: { id: videoId },
-        select: { script: true },
+        data: {
+          errorMessage: message,
+          status: 'failed',
+        },
       })
-
-      if (video?.script) {
-        const script = video.script as unknown as ScriptSegment[]
-        const updatedScript = script.map((seg, idx) => {
-          if (idx === segmentIndex) {
-            return { ...seg, audioUrl: '', error: message }
-          }
-          return seg
-        })
-
-        await prisma.video.update({
-          where: { id: videoId },
-          data: {
-            script: updatedScript as any,
-          },
-        })
-      }
+      await prisma.renderJob.update({
+        where: { videoId },
+        data: {
+          errorMessage: message,
+          status: 'failed',
+          completedAt: new Date(),
+        },
+      })
     } catch {
       // Non-critical
     }

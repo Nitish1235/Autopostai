@@ -13,7 +13,7 @@ import {
   generateThumbnailKey,
 } from '@/lib/gcs/storage'
 import { getMusicPath } from '@/lib/music/selector'
-import { offsetSegmentTimestamps } from '@/lib/utils/timestamps'
+import { convertToFrameTimestamps } from '@/lib/utils/timestamps'
 
 import { getMotionForSegment, buildImageClipCommand } from './kenBurns'
 import {
@@ -91,6 +91,8 @@ export async function renderVideo(params: {
   musicVolume: number
   format: string
   imageStyle: string
+  masterAudioUrl: string
+  masterWordTimestamps: any[]
 }): Promise<{ videoUrl: string; thumbnailUrl: string }> {
   const {
     videoId,
@@ -102,6 +104,8 @@ export async function renderVideo(params: {
     musicVolume,
     format,
     imageStyle,
+    masterAudioUrl,
+    masterWordTimestamps,
   } = params
 
   const workDir = path.join('/tmp', 'renders', videoId)
@@ -128,17 +132,19 @@ export async function renderVideo(params: {
       fs.writeFileSync(imgPath, Buffer.from(response.data))
     }
 
-    // Download voice audio segments
-    for (let index = 0; index < script.length; index++) {
-      const segment = script[index]
-      if (!segment.audioUrl) continue
-
-      const response = await axios.get(segment.audioUrl, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      })
-      const audioPath = path.join(workDir, `voice_${index}.mp3`)
-      fs.writeFileSync(audioPath, Buffer.from(response.data))
+    // Download master voice audio
+    console.log(`[render] Downloading master audio for ${videoId}`)
+    const masterVoicePath = path.join(workDir, 'voice_master.mp3')
+    if (masterAudioUrl) {
+      try {
+        const response = await axios.get(masterAudioUrl, {
+          responseType: 'arraybuffer',
+          timeout: 45000,
+        })
+        fs.writeFileSync(masterVoicePath, Buffer.from(response.data))
+      } catch (err) {
+        console.error(`[render] Failed to download master audio:`, err)
+      }
     }
 
     // Get music path
@@ -167,10 +173,24 @@ export async function renderVideo(params: {
     const imageClipPaths: string[] = []
     const clipDurations: number[] = []
 
+    // ── Calculate global Image Duration based on Master Audio ──
+    let masterVoiceDuration = 15.0 // fallback
+    if (masterWordTimestamps && masterWordTimestamps.length > 0) {
+      const lastWord = masterWordTimestamps[masterWordTimestamps.length - 1] as any
+      masterVoiceDuration = (lastWord.end ?? lastWord.start ?? 14.5) + 0.5
+    }
+
+    // Number of visual scenes corresponds directly to imageUrls/script length
+    const totalScenes = script.length > 0 ? script.length : imageUrls.length
+    
+    // The exact duration each image will stay on screen to perfectly match the entire audio length
+    const imageDuration = totalScenes > 0 ? (masterVoiceDuration / totalScenes) : 5.0
+    console.log(`[render] Global audio duration: ${masterVoiceDuration}s. Unified image duration: ${imageDuration.toFixed(2)}s per scene.`)
+
     for (let index = 0; index < script.length; index++) {
       const imgPath = path.join(workDir, `img_${index}.webp`)
       const clipPath = path.join(workDir, `clip_${index}.mp4`)
-      const duration = script[index].duration ?? 3.5
+      const duration = imageDuration
 
       // FIX #6/#7: If image is missing, generate a solid black frame instead of
       // skipping. This keeps audio and video perfectly in sync regardless of
@@ -237,22 +257,10 @@ export async function renderVideo(params: {
 
     await updateProgress(videoId, 78)
 
-    // ── STEP 4: Concatenate voice segments ─────────────
-
-    console.log(`[render] Concatenating voice segments for ${videoId}`)
-    const voicePaths = script
-      .map((_, i) => path.join(workDir, `voice_${i}.mp3`))
-      .filter((p) => fs.existsSync(p))
-
-    const masterVoicePath = path.join(workDir, 'voice_master.mp3')
-
-    if (voicePaths.length > 0) {
-      const voiceConcatCmd = buildVoiceConcatCommand({
-        audioPaths: voicePaths,
-        outputPath: masterVoicePath,
-      })
-      await execFFmpeg(voiceConcatCmd)
-    }
+    // ── STEP 4: Audio Concat (Skiped) ──────────────────────────
+    // Because we migrated to a Single Master Audio Track, we no longer need to 
+    // stitch together individual segment chunk MP3s using the concat filter.
+    // The master file `voice_master.mp3` is perfectly sequenced out of the box.
 
     // ── STEP 5: Mix voice + music ──────────────────────
 
@@ -292,21 +300,18 @@ export async function renderVideo(params: {
       fs.copyFileSync(concatPath, muxedPath)
     }
 
-    // ── STEP 7: Burn subtitles ─────────────────────────
-
     console.log(`[render] Burning subtitles for ${videoId}`)
 
-    // Merge all word timestamps with offset
-    const segmentsWithWords = script.map((seg) => ({
-      words: (seg.wordTimestamps ?? []).map((w) => ({
-        word: w.word,
-        start: w.start,
-        end: w.end,
-      })),
-      audioDuration: seg.duration ?? 3.5,
+    // Since we generate a single Unified Audio Track now, the `masterWordTimestamps`
+    // natively contains perfect global timings spanning from 0s -> End of Video.
+    // We perfectly bypass `offsetSegmentTimestamps()` which introduced desync padding drift.
+    const rawWords = (masterWordTimestamps || []).map((w: any) => ({
+      word: w.word,
+      start: w.start,
+      end: w.end,
     }))
 
-    const allWordTimestamps = offsetSegmentTimestamps(segmentsWithWords)
+    const allWordTimestamps = convertToFrameTimestamps(rawWords, 30)
 
     // Build ASS file
     const style = buildASSStyle(subtitleConfig)

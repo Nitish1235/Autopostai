@@ -37,7 +37,7 @@ interface ASSStyle {
 // ── Font Name Map ────────────────────────────────────
 
 const FONT_NAME_MAP: Record<SubtitleFont, string> = {
-  impact: 'Impact',
+  impact: 'Anton',
   inter: 'Inter',
   bebas: 'Bebas Neue',
   caveat: 'Caveat',

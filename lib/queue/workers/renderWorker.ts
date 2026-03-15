@@ -26,6 +26,8 @@ export async function handleRenderJob(data: RenderJob) {
         script: true,
         imageUrls: true,
         subtitleConfig: true,
+        masterAudioUrl: true,
+        masterWordTimestamps: true,
         musicMood: true,
         musicVolume: true,
         platforms: true,
@@ -82,6 +84,8 @@ export async function handleRenderJob(data: RenderJob) {
       musicVolume: video.musicVolume,
       format: video.format,
       imageStyle: video.imageStyle,
+      masterAudioUrl: video.masterAudioUrl ?? '',
+      masterWordTimestamps: video.masterWordTimestamps as any[],
     })
 
     const elapsed = Date.now() - startTime

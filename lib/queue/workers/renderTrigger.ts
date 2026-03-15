@@ -20,6 +20,8 @@ export async function checkAndTriggerRender(
       format: true,
       script: true,
       imageUrls: true,
+      masterAudioUrl: true,
+      masterWordTimestamps: true,
       subtitleConfig: true,
       musicMood: true,
       musicVolume: true,
@@ -45,18 +47,14 @@ export async function checkAndTriggerRender(
     (url) => !!url && url.length > 0
   ).length
 
-  // 4. Count completed voice segments
-  const completedVoice = script.filter(
-    (seg) => !!seg.audioUrl && seg.audioUrl.length > 0
-  ).length
-
+  // 4. Check completed master voice
+  const allVoiceReady = !!video.masterAudioUrl
   const allImagesReady = completedImages === totalExpected
-  const allVoiceReady = completedVoice === totalExpected
 
   // 5. If not all ready, log progress and return
   if (!allImagesReady || !allVoiceReady) {
     console.log(
-      `[renderTrigger] Waiting... images: ${completedImages}/${totalExpected}, voice: ${completedVoice}/${totalExpected}`
+      `[renderTrigger] Waiting... images: ${completedImages}/${totalExpected}, voice: ${allVoiceReady ? 'ready' : 'pending'}`
     )
     return
   }
@@ -101,6 +99,8 @@ export async function checkAndTriggerRender(
     musicVolume: video.musicVolume,
     script: script as unknown as Record<string, unknown>[],
     imageUrls: video.imageUrls,
+    masterAudioUrl: video.masterAudioUrl as string,
+    masterWordTimestamps: video.masterWordTimestamps as Record<string, unknown>[],
   }, {
     deduplicationId: `render-${videoId}`,
   })

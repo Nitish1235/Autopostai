@@ -97,6 +97,8 @@ model Video {
 
   // Generated content
   script      Json?       // ScriptSegment[]
+  masterAudioUrl String?  // Single TTS file spanning the entire video
+  masterWordTimestamps Json? // [{word, start, end}] array mapping the master TTS
   imageUrls   String[]    @default([])
   audioUrl    String?
   musicUrl    String?

@@ -43,11 +43,10 @@ export interface ImageJob {
 export interface VoiceJob {
   videoId: string
   userId: string
-  segmentIndex: number
-  narration: string
+  narration: string // This will now contain the full concatenated script
   voiceId: string
   voiceSpeed: number
-  totalSegments: number
+  totalSegments: number // We keep this for progress reporting
 }
 
 export interface RenderJob {
@@ -59,6 +58,8 @@ export interface RenderJob {
   musicVolume: number
   script: Record<string, unknown>[]
   imageUrls: string[]
+  masterAudioUrl: string
+  masterWordTimestamps: Record<string, unknown>[]
 }
 
 export interface PublishJob {

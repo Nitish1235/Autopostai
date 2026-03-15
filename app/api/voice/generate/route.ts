@@ -67,7 +67,6 @@ export async function POST(request: Request) {
       speed: voiceSpeed,
       userId: userId,
       videoId,
-      segmentIndex,
     })
 
     // Update segment in Video.script JSON

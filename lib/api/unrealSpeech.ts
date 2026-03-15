@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { uploadBuffer, generateSegmentKey } from '@/lib/gcs/storage'
+import { uploadBuffer, generateMasterAudioKey } from '@/lib/gcs/storage'
 
 // ── Config ───────────────────────────────────────────
 const BASE_URL = 'https://api.v8.unrealspeech.com'
@@ -214,7 +214,6 @@ export async function generateVoiceAndUpload(params: {
   speed?: number
   userId: string
   videoId: string
-  segmentIndex: number
 }): Promise<{
   gcsUrl: string
   words: WordTimestampRaw[]
@@ -226,12 +225,9 @@ export async function generateVoiceAndUpload(params: {
     speed: params.speed,
   })
 
-  const gcsKey = generateSegmentKey(
+  const gcsKey = generateMasterAudioKey(
     params.userId,
-    params.videoId,
-    'audio',
-    params.segmentIndex,
-    'mp3'
+    params.videoId
   )
 
   const gcsUrl = await uploadBuffer(result.audioBuffer, gcsKey, 'audio/mpeg')

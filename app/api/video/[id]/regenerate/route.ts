@@ -170,7 +170,6 @@ export async function POST(
         speed: video.voiceSpeed,
         userId,
         videoId,
-        segmentIndex,
       })
 
       // Update script segment

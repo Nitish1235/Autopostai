@@ -196,6 +196,7 @@ export async function DELETE(
         status: true,
         imageUrls: true,
         script: true,
+        masterAudioUrl: true,
         topicQueueId: true,
       },
     })
@@ -230,18 +231,13 @@ export async function DELETE(
       }
     }
 
-    // Delete audio segments
-    const script = video.script as unknown as ScriptSegment[] | null
-    if (script) {
-      for (const seg of script) {
-        if (seg.audioUrl) {
-          try {
-            const key = new URL(seg.audioUrl).pathname.replace(/^\//, '')
-            void deleteFile(key).catch(() => { })
-          } catch {
-            // URL parse failure — skip
-          }
-        }
+    // Delete master audio
+    if (video.masterAudioUrl) {
+      try {
+        const key = new URL(video.masterAudioUrl).pathname.replace(/^\//, '')
+        void deleteFile(key).catch(() => { })
+      } catch {
+        // URL parse failure — skip
       }
     }
 

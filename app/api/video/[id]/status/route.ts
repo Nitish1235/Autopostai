@@ -36,6 +36,7 @@ export async function GET(
         videoUrl: true,
         thumbnailUrl: true,
         errorMessage: true,
+        masterAudioUrl: true,
       },
     })
 
@@ -71,10 +72,8 @@ export async function GET(
       (url) => !!url && url.length > 0
     ).length
 
-    // 6. Count completed voice segments
-    const voiceComplete = script
-      ? script.filter((seg) => !!seg.audioUrl && seg.audioUrl.length > 0).length
-      : 0
+    // 6. Check completed master voice
+    const voiceComplete = video.masterAudioUrl ? totalSegments : 0
 
     // 7. Calculate overall progress
     let progress = 0
