@@ -85,6 +85,7 @@ export async function generateImage(params: {
               return
             }
 
+            const inferenceParams = getInferenceParams(params.model ?? 'runware:100@1')
             const request: RunwareImageRequest = {
               taskType: 'imageInference',
               taskUUID,
@@ -97,8 +98,8 @@ export async function generateImage(params: {
               outputFormat: 'WEBP',
               outputType: ['URL'],
               seed: params.seed,
-              steps: 4,
-              CFGScale: 1,
+              steps: inferenceParams.steps,
+              CFGScale: inferenceParams.cfg,
             }
             ws.send(JSON.stringify([request]))
             return
@@ -216,6 +217,7 @@ export async function generateImageBatch(params: {
               return
             }
 
+            const inferenceParams = getInferenceParams(model)
             const requests: RunwareImageRequest[] = prompts.map((prompt, index) => {
               const taskUUID = randomUUID()
               taskUUIDToIndex.set(taskUUID, index)
@@ -231,8 +233,8 @@ export async function generateImageBatch(params: {
                 outputFormat: 'WEBP',
                 outputType: ['URL'],
                 seed: prompt.seed,
-                steps: 4,
-                CFGScale: 1,
+                steps: inferenceParams.steps,
+                CFGScale: inferenceParams.cfg,
               }
             })
 
@@ -374,25 +376,18 @@ export async function upscaleImage(imageUrl: string): Promise<string> {
 
 // ── Model Selector ───────────────────────────────────
 
-export function getModelForStyle(imageStyle: string): string {
-  switch (imageStyle) {
-    case 'cinematic':
-      return 'runware:100@1'
-    case 'anime':
-      return 'civitai:36520@76907'  // Anything V5 — anime
-    case 'dark_fantasy':
-      return 'civitai:4201@501240'  // Realistic Vision — dark
-    case 'cyberpunk':
-      return 'civitai:4384@128713'  // DreamShaper — cyberpunk
-    case 'documentary':
-      return 'runware:100@1'        // FLUX is best for realistic/doc
-    case 'vintage':
-      return 'civitai:9409@16677'   // Deliberate — vintage/film
-    case '3d_render':
-      return 'runware:100@1'
-    case 'minimal':
-      return 'runware:100@1'
-    default:
-      return 'runware:100@1'
+export function getModelForStyle(_imageStyle: string): string {
+  // Use FLUX for all styles — fastest and most cost-effective
+  return 'runware:100@1'
+}
+
+// ── Inference Params per Model Type ──────────────────
+// FLUX models (runware:100@1) need very few steps and low CFG.
+// SD 1.5 / CivitAI checkpoint models need ~25 steps and CFG 7.
+
+export function getInferenceParams(model: string): { steps: number; cfg: number } {
+  if (model.startsWith('runware:')) {
+    return { steps: 4, cfg: 1 }    // FLUX — fast inference
   }
+  return { steps: 25, cfg: 7 }     // SD 1.5 checkpoints — need full diffusion
 }

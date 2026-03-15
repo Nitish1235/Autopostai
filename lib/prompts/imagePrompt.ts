@@ -68,7 +68,34 @@ const ATMOSPHERE_BANK = [
   'golden dust particles in light',
 ]
 
-export function getVariationModifiers(seed: number): string {
+export function getVariationModifiers(seed: number, imageStyle?: string): string {
+  // Anime/illustrated styles get anime-specific composition, not photographic terms
+  if (imageStyle === 'anime') {
+    const ANIME_COMPOSITION = [
+      'dynamic composition',
+      'detailed background scenery',
+      'dramatic perspective',
+      'split lighting',
+      'sakura petals floating',
+      'wind-swept hair',
+      'lens flare highlights',
+      'soft bokeh background',
+    ]
+    const ANIME_MOOD = [
+      'warm sunset tones',
+      'cool blue twilight',
+      'vibrant spring colors',
+      'moody rain atmosphere',
+      'golden morning light',
+      'starry night sky',
+      'misty mountain scenery',
+      'cherry blossom season',
+    ]
+    const comp = ANIME_COMPOSITION[seed % ANIME_COMPOSITION.length]
+    const mood = ANIME_MOOD[seed % ANIME_MOOD.length]
+    return `${comp}, ${mood}`
+  }
+
   const angleIndex = seed % ANGLE_BANK.length
   const timeIndex = seed % TIME_BANK.length
   const atmosphereIndex = seed % ATMOSPHERE_BANK.length
@@ -86,7 +113,7 @@ export function buildImagePrompt(
   variationSeed?: number
 ): string {
   const styleSuffix = STYLE_SUFFIXES[imageStyle] ?? STYLE_SUFFIXES.cinematic
-  const variationModifiers = getVariationModifiers(variationSeed ?? 0)
+  const variationModifiers = getVariationModifiers(variationSeed ?? 0, imageStyle)
   return `${basePrompt}, ${styleSuffix}, ${variationModifiers}`
 }
 

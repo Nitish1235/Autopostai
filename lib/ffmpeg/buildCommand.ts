@@ -15,12 +15,11 @@ import {
 import { getMusicPath } from '@/lib/music/selector'
 import { convertToFrameTimestamps } from '@/lib/utils/timestamps'
 
-import { getMotionForSegment, buildImageClipCommand } from './kenBurns'
+import { getMotionForSegment, KenBurnsMotion } from './kenBurns'
 import {
   getTransitionForStyle,
   getTransitionDuration,
-  buildConcatWithTransitions,
-  buildSimpleConcat,
+  buildMegaRenderCommand
 } from './transitions'
 import {
   buildASSStyle,
@@ -29,10 +28,7 @@ import {
   writeASSFile,
 } from './subtitles'
 import {
-  buildVoiceConcatCommand,
   buildAudioMixCommand,
-  buildFinalMuxCommand,
-  buildColorGradeCommand,
   buildThumbnailCommand,
 } from './audioMix'
 
@@ -44,7 +40,10 @@ const execFileAsync = promisify(execFile)
 
 export async function execFFmpeg(args: string[]): Promise<void> {
   try {
-    const { stdout, stderr } = await execFileAsync('ffmpeg', args, {
+    // Add -threads 0 to allow FFmpeg to use all available cores
+    const fullArgs = ['-threads', '0', ...args]
+    
+    const { stdout, stderr } = await execFileAsync('ffmpeg', fullArgs, {
       maxBuffer: 50 * 1024 * 1024,
       timeout: 600000, // 10 minute timeout per step
     })
@@ -119,33 +118,33 @@ export async function renderVideo(params: {
     await updateProgress(videoId, 62, 'downloading')
     console.log(`[render] Downloading assets for ${videoId}`)
 
-    // Download images
-    for (let index = 0; index < imageUrls.length; index++) {
-      const url = imageUrls[index]
-      if (!url) continue
-
-      const response = await axios.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      })
-      const imgPath = path.join(workDir, `img_${index}.webp`)
-      fs.writeFileSync(imgPath, Buffer.from(response.data))
-    }
+    // Download images concurrently
+    const imageDownloads = imageUrls.map(async (url, index) => {
+        if (!url) return null;
+        try {
+            const response = await axios.get(url, {
+                responseType: 'arraybuffer',
+                timeout: 30000,
+            })
+            const imgPath = path.join(workDir, `img_${index}.webp`)
+            fs.writeFileSync(imgPath, Buffer.from(response.data))
+            return imgPath
+        } catch (error) {
+            console.error(`[render] Failed to download image ${index}:`, error)
+            return null
+        }
+    })
 
     // Download master voice audio
     console.log(`[render] Downloading master audio for ${videoId}`)
     const masterVoicePath = path.join(workDir, 'voice_master.mp3')
-    if (masterAudioUrl) {
-      try {
-        const response = await axios.get(masterAudioUrl, {
-          responseType: 'arraybuffer',
-          timeout: 45000,
-        })
-        fs.writeFileSync(masterVoicePath, Buffer.from(response.data))
-      } catch (err) {
-        console.error(`[render] Failed to download master audio:`, err)
-      }
-    }
+    const audioDownload = masterAudioUrl 
+        ? axios.get(masterAudioUrl, { responseType: 'arraybuffer', timeout: 45000 })
+            .then(res => fs.writeFileSync(masterVoicePath, Buffer.from(res.data)))
+            .catch(err => console.error(`[render] Failed to download master audio:`, err))
+        : Promise.resolve()
+
+    await Promise.all([...imageDownloads, audioDownload])
 
     // Get music path
     let musicPath: string
@@ -163,110 +162,91 @@ export async function renderVideo(params: {
       ])
       musicPath = silentPath
     }
+    
+    // ── STEP 2: Prepare Timings & Subtitles ────────────────────────
 
-    // ── STEP 2: Ken Burns clips ────────────────────────
-
-    await updateProgress(videoId, 65, 'render')
-    console.log(`[render] Creating Ken Burns clips for ${videoId}`)
+    await updateProgress(videoId, 70, 'preparing')
+    console.log(`[render] Preparing timeline and subtitles for ${videoId}`)
 
     const seed = videoId.charCodeAt(0) + videoId.charCodeAt(1)
-    const imageClipPaths: string[] = []
-    const clipDurations: number[] = []
-
-    // ── Calculate global Image Duration based on Master Audio ──
+    
+    // Calculate global Image Duration based on Master Audio
     let masterVoiceDuration = 15.0 // fallback
     if (masterWordTimestamps && masterWordTimestamps.length > 0) {
       const lastWord = masterWordTimestamps[masterWordTimestamps.length - 1] as any
       masterVoiceDuration = (lastWord.end ?? lastWord.start ?? 14.5) + 0.5
     }
 
-    // Number of visual scenes corresponds directly to imageUrls/script length
     const totalScenes = script.length > 0 ? script.length : imageUrls.length
-    
-    // The exact duration each image will stay on screen to perfectly match the entire audio length
     const imageDuration = totalScenes > 0 ? (masterVoiceDuration / totalScenes) : 5.0
     console.log(`[render] Global audio duration: ${masterVoiceDuration}s. Unified image duration: ${imageDuration.toFixed(2)}s per scene.`)
 
-    for (let index = 0; index < script.length; index++) {
+    const activeImagePaths: string[] = []
+    const clipDurations: number[] = []
+    const motions: KenBurnsMotion[] = []
+
+    for (let index = 0; index < totalScenes; index++) {
       const imgPath = path.join(workDir, `img_${index}.webp`)
-      const clipPath = path.join(workDir, `clip_${index}.mp4`)
       const duration = imageDuration
 
-      // FIX #6/#7: If image is missing, generate a solid black frame instead of
-      // skipping. This keeps audio and video perfectly in sync regardless of
-      // image download failures.
       if (!fs.existsSync(imgPath)) {
-        console.warn(`[render] Image not found for segment ${index} — generating black frame`)
+        console.warn(`[render] Image not found for segment ${index} — creating black frame`)
+        // Create black frame on the fly
+        const blackImgPath = path.join(workDir, `black_${index}.webp`)
         try {
-          await execFFmpeg([
-            '-f', 'lavfi',
-            '-i', `color=c=black:s=1080x1920:r=30:d=${duration}`,
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '28',
-            '-y', clipPath,
-          ])
-          imageClipPaths.push(clipPath)
-          clipDurations.push(duration)
-        } catch (blackErr) {
-          console.error(`[render] Black frame fallback also failed for segment ${index}:`, blackErr)
+            await execFFmpeg([
+                '-f', 'lavfi',
+                '-i', 'color=c=black:s=1080x1920:r=30:d=1',
+                '-vframes', '1',
+                '-y', blackImgPath
+            ])
+            activeImagePaths.push(blackImgPath)
+        } catch {
+             continue // if black frame generation fails skip completely
         }
-        continue
+      } else {
+        activeImagePaths.push(imgPath)
       }
-
-      const motion = getMotionForSegment(index, imageStyle, seed)
-      const command = buildImageClipCommand({
-        inputPath: imgPath,
-        outputPath: clipPath,
-        duration,
-        motion,
-        segmentIndex: index,
-        imageStyle,
-      })
-
-      await execFFmpeg(command)
-      imageClipPaths.push(clipPath)
       clipDurations.push(duration)
+      motions.push(getMotionForSegment(index, imageStyle, seed))
     }
 
-    await updateProgress(videoId, 72)
+    // Prepare Subtitles
+    const rawWords = (masterWordTimestamps || []).map((w: any) => ({
+      word: w.word,
+      start: w.start,
+      end: w.end,
+    }))
 
-    // ── STEP 3: Concat clips with transitions ──────────
+    const allWordTimestamps = convertToFrameTimestamps(rawWords, 30)
 
-    console.log(`[render] Concatenating clips for ${videoId}`)
-    const concatPath = path.join(workDir, 'video_raw.mp4')
-    const transitionType = getTransitionForStyle(imageStyle)
-    const transitionDuration = getTransitionDuration(format)
+    const style = buildASSStyle(subtitleConfig)
+    const events = buildWordEvents({
+      wordTimestamps: allWordTimestamps,
+      subtitleConfig,
+      fps: 30,
+    })
 
-    try {
-      const concatCommand = buildConcatWithTransitions({
-        clipPaths: imageClipPaths,
-        clipDurations,
-        outputPath: concatPath,
-        transitionType,
-        transitionDuration,
-        fps: 30,
-      })
-      await execFFmpeg(concatCommand)
-    } catch {
-      // Fallback to simple concat
-      console.log(`[render] Transition concat failed, using simple concat`)
-      const simpleCommand = buildSimpleConcat(imageClipPaths, concatPath)
-      await execFFmpeg(simpleCommand)
+    let assPath: string | undefined = undefined
+    if (events.length > 0) {
+        assPath = path.join(workDir, 'subtitles.ass')
+        const assContent = buildASSFile({
+            events,
+            style,
+            videoWidth: 1080,
+            videoHeight: 1920,
+        })
+        await writeASSFile(assContent, assPath)
     }
 
-    await updateProgress(videoId, 78)
+    // ── STEP 3: Mix voice + music ──────────────────────
 
-    // ── STEP 4: Audio Concat (Skiped) ──────────────────────────
-    // Because we migrated to a Single Master Audio Track, we no longer need to 
-    // stitch together individual segment chunk MP3s using the concat filter.
-    // The master file `voice_master.mp3` is perfectly sequenced out of the box.
-
-    // ── STEP 5: Mix voice + music ──────────────────────
-
+    await updateProgress(videoId, 75, 'mixing_audio')
     console.log(`[render] Mixing audio for ${videoId}`)
-    const totalDuration = clipDurations.reduce((a, b) => a + b, 0)
+    
+    // We only need the mixed audio file
     const mixedAudioPath = path.join(workDir, 'audio_mixed.aac')
+    const totalDuration = clipDurations.reduce((a, b) => a + b, 0)
 
     if (fs.existsSync(masterVoicePath)) {
       const audioMixCmd = buildAudioMixCommand({
@@ -278,104 +258,50 @@ export async function renderVideo(params: {
         totalDuration,
       })
       await execFFmpeg(audioMixCmd)
+    } else {
+        // Just copy the music if no voice
+        fs.copyFileSync(musicPath, mixedAudioPath)
     }
 
-    await updateProgress(videoId, 83)
+    // ── STEP 4: Single Mega Render Pass ──────────────────────
 
-    // ── STEP 6: Mux video + audio ──────────────────────
+    await updateProgress(videoId, 80, 'rendering')
+    console.log(`[render] Starting single-pass video render for ${videoId}`)
+    
+    const finalVideoPath = path.join(workDir, 'video_merged.mp4')
+    const transitionType = getTransitionForStyle(imageStyle)
+    const transitionDuration = getTransitionDuration(format)
 
-    console.log(`[render] Muxing video + audio for ${videoId}`)
-    const muxedPath = path.join(workDir, 'video_muxed.mp4')
-
-    if (fs.existsSync(mixedAudioPath)) {
-      const muxCmd = buildFinalMuxCommand({
-        videoPath: concatPath,
+    const megaCommand = buildMegaRenderCommand({
+        imagePaths: activeImagePaths,
+        durations: clipDurations,
+        motions,
         audioPath: mixedAudioPath,
-        outputPath: muxedPath,
-        duration: totalDuration,
-      })
-      await execFFmpeg(muxCmd)
-    } else {
-      // No audio — just copy video
-      fs.copyFileSync(concatPath, muxedPath)
-    }
-
-    console.log(`[render] Burning subtitles for ${videoId}`)
-
-    // Since we generate a single Unified Audio Track now, the `masterWordTimestamps`
-    // natively contains perfect global timings spanning from 0s -> End of Video.
-    // We perfectly bypass `offsetSegmentTimestamps()` which introduced desync padding drift.
-    const rawWords = (masterWordTimestamps || []).map((w: any) => ({
-      word: w.word,
-      start: w.start,
-      end: w.end,
-    }))
-
-    const allWordTimestamps = convertToFrameTimestamps(rawWords, 30)
-
-    // Build ASS file
-    const style = buildASSStyle(subtitleConfig)
-    const events = buildWordEvents({
-      wordTimestamps: allWordTimestamps,
-      subtitleConfig,
-      fps: 30,
+        outputPath: finalVideoPath,
+        transitionType,
+        transitionDuration,
+        imageStyle,
+        assSubtitlePath: assPath,
+        fps: 30
     })
 
-    const assPath = path.join(workDir, 'subtitles.ass')
-    const assContent = buildASSFile({
-      events,
-      style,
-      videoWidth: 1080,
-      videoHeight: 1920,
-    })
-    await writeASSFile(assContent, assPath)
+    await execFFmpeg(megaCommand)
 
-    const subtitledPath = path.join(workDir, 'video_subtitled.mp4')
+    await updateProgress(videoId, 92)
 
-    if (events.length > 0) {
-      // Escape the path for FFmpeg ass filter
-      const escapedAssPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:')
-      await execFFmpeg([
-        '-i', muxedPath,
-        '-vf', `ass=${escapedAssPath}`,
-        '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '22',
-        '-c:a', 'copy',
-        '-y', subtitledPath,
-      ])
-    } else {
-      // No subtitles — just copy
-      fs.copyFileSync(muxedPath, subtitledPath)
-    }
+    // ── STEP 5: Extract thumbnail ──────────────────────
 
-    await updateProgress(videoId, 90)
-
-    // ── STEP 8: Color grade + grain ────────────────────
-
-    console.log(`[render] Applying color grade for ${videoId}`)
-    const gradedPath = path.join(workDir, 'video_graded.mp4')
-    const gradeCmd = buildColorGradeCommand({
-      inputPath: subtitledPath,
-      outputPath: gradedPath,
-      imageStyle,
-    })
-    await execFFmpeg(gradeCmd)
-
-    await updateProgress(videoId, 94)
-
-    // ── STEP 9: Extract thumbnail ──────────────────────
-
+    await updateProgress(videoId, 94, 'thumbnail')
     console.log(`[render] Extracting thumbnail for ${videoId}`)
     const thumbPath = path.join(workDir, 'thumbnail.jpg')
     const thumbCmd = buildThumbnailCommand({
-      videoPath: gradedPath,
+      videoPath: finalVideoPath,
       outputPath: thumbPath,
       timeOffset: 3,
     })
     await execFFmpeg(thumbCmd)
 
-    // ── STEP 10: Upload to GCS ─────────────────────────
+    // ── STEP 6: Upload to GCS ─────────────────────────
 
     await updateProgress(videoId, 96, 'uploading')
     console.log(`[render] Uploading to GCS for ${videoId}`)
@@ -383,10 +309,10 @@ export async function renderVideo(params: {
     const videoKey = generateVideoKey(userId, videoId)
     const thumbKey = generateThumbnailKey(userId, videoId)
 
-    const videoUrl = await uploadFromPath(gradedPath, videoKey, 'video/mp4')
+    const videoUrl = await uploadFromPath(finalVideoPath, videoKey, 'video/mp4')
     const thumbnailUrl = await uploadFromPath(thumbPath, thumbKey, 'image/jpeg')
 
-    // ── STEP 11: Update DB ─────────────────────────────
+    // ── STEP 7: Update DB ─────────────────────────────
 
     const elapsed = Date.now() - startTime
 
@@ -414,7 +340,7 @@ export async function renderVideo(params: {
 
     return { videoUrl, thumbnailUrl }
   } finally {
-    // ── STEP 12: Cleanup temp files ────────────────────
+    // ── STEP 8: Cleanup temp files ────────────────────
 
     try {
       fs.rmSync(workDir, { recursive: true, force: true })

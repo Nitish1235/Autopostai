@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { KenBurnsMotion, getMotionForSegment, buildKenBurnsFilter } from './kenBurns'
 
 // ── Types ────────────────────────────────────────────
 
@@ -73,72 +74,134 @@ export function getTransitionDuration(format: string): number {
   }
 }
 
-// ── Build Concat with Transitions ────────────────────
+// ── Build Color Grade Filter String ──────────────────
 
-export function buildConcatWithTransitions(params: {
-  clipPaths: string[]
-  clipDurations: number[]
+export function getColorGradeFilter(imageStyle: string): string {
+  switch (imageStyle) {
+    case 'cinematic':
+      return "curves=r='0/0 0.3/0.25 0.7/0.75 1/1':g='0/0 0.3/0.28 0.7/0.72 1/1':b='0/0 0.3/0.32 0.7/0.68 1/1',noise=alls=8:allf=t"
+    case 'dark_fantasy':
+      return "curves=master='0/0 0.5/0.4 1/0.9',noise=alls=6:allf=t"
+    case 'vintage':
+      return "curves=r='0/0.1 0.5/0.55 1/0.9':b='0/0.05 0.5/0.45 1/0.8',noise=alls=10:allf=t"
+    case 'cyberpunk':
+      return "hue=s=1.4,curves=r='0/0 0.5/0.45 1/0.9':b='0/0.1 0.5/0.55 1/1',noise=alls=5:allf=t"
+    default:
+      return "unsharp=5:5:0.8:3:3:0.4,noise=alls=4:allf=t"
+  }
+}
+
+// ── Build Mega Filter Complex ─────────────────────────
+
+export function buildMegaRenderCommand(params: {
+  imagePaths: string[]
+  durations: number[]
+  motions: KenBurnsMotion[]
+  audioPath: string
   outputPath: string
   transitionType: TransitionType
   transitionDuration: number
-  fps: number
+  imageStyle: string
+  assSubtitlePath?: string
+  fps?: number
 }): string[] {
   const {
-    clipPaths,
-    clipDurations,
+    imagePaths,
+    durations,
+    motions,
+    audioPath,
     outputPath,
     transitionType,
     transitionDuration,
+    imageStyle,
+    assSubtitlePath,
+    fps = 30,
   } = params
 
-  if (clipPaths.length === 0) {
-    throw new Error('No clips provided for concatenation')
+  if (imagePaths.length === 0) {
+    throw new Error('No images provided for concatenation')
   }
 
-  if (clipPaths.length === 1) {
-    // Single clip — just copy
-    return ['-i', clipPaths[0], '-c', 'copy', '-y', outputPath]
-  }
-
-  const xfadeType = XFADE_MAP[transitionType] ?? 'fade'
-
-  // Build input args
   const inputArgs: string[] = []
-  for (const clipPath of clipPaths) {
-    inputArgs.push('-i', clipPath)
+  imagePaths.forEach((p, i) => {
+    // Limit input duration slightly to prevent infinite loops before filter applies
+    inputArgs.push('-loop', '1', '-t', (durations[i] + 1).toString(), '-i', p) 
+  })
+  
+  // Audio is the last input
+  const audioInputIndex = imagePaths.length
+  inputArgs.push('-i', audioPath)
+
+  const filterParts: string[] = []
+
+  // Step 1: Ken Burns on each image
+  for (let i = 0; i < imagePaths.length; i++) {
+    const kenBurns = buildKenBurnsFilter({
+      motion: motions[i],
+      duration: durations[i],
+      fps,
+      width: 1080,
+      height: 1920,
+    })
+    
+    // Convert duration to frames exactly
+    const durationFrames = Math.ceil(durations[i] * fps)
+    
+    filterParts.push(
+      `[${i}:v]scale=1200:2133:force_original_aspect_ratio=increase,crop=1200:2133,${kenBurns},scale=1080:1920,setsar=1,settb=1/${fps},format=yuv420p,trim=duration=${durations[i]}[v${i}]`
+    )
   }
 
-  // Build xfade filter chain
-  const filterParts: string[] = []
-  let prevLabel = '0:v'
+  // Step 2: Xfade transitions
+  const xfadeType = XFADE_MAP[transitionType] ?? 'fade'
+  let prevLabel = 'v0'
   let cumulativeOffset = 0
 
-  for (let i = 1; i < clipPaths.length; i++) {
-    // Offset = cumulative clip durations minus accumulated transitions
-    cumulativeOffset += clipDurations[i - 1]
-    const offset = Math.max(
-      0,
-      cumulativeOffset - i * transitionDuration
-    )
-    const outputLabel = i === clipPaths.length - 1 ? 'vout' : `v${i}`
-
-    filterParts.push(
-      `[${prevLabel}][${i}:v]xfade=transition=${xfadeType}:duration=${transitionDuration}:offset=${offset.toFixed(3)}[${outputLabel}]`
-    )
-
-    prevLabel = outputLabel
+  if (imagePaths.length > 1) {
+    for (let i = 1; i < imagePaths.length; i++) {
+        cumulativeOffset += durations[i - 1]
+        const offset = Math.max(0, cumulativeOffset - i * transitionDuration)
+        
+        const outputLabel = i === imagePaths.length - 1 ? 'vout_xfade' : `v_concat${i}`
+        
+        filterParts.push(
+            `[${prevLabel}][v${i}]xfade=transition=${xfadeType}:duration=${transitionDuration}:offset=${offset.toFixed(3)}[${outputLabel}]`
+        )
+        prevLabel = outputLabel
+    }
+  } else {
+    // If only one image, just pass it through
+    filterParts.push(`[v0]copy[vout_xfade]`)
+    prevLabel = 'vout_xfade'
   }
 
+  // Step 3: Color Grading & Subtitles
+  const colorGrade = getColorGradeFilter(imageStyle)
+  
+  let finalEffectsFilter = colorGrade
+  
+  if (assSubtitlePath) {
+     // Escape the path for FFmpeg ass filter
+     const escapedAssPath = assSubtitlePath.replace(/\\/g, '/').replace(/:/g, '\\\\:')
+     // Subtitles ALWAYS go last after color grading to prevent distortion
+     finalEffectsFilter += `,ass='${escapedAssPath}'`
+  }
+
+  filterParts.push(`[${prevLabel}]${finalEffectsFilter}[vout_final]`)
+  
   const filterComplex = filterParts.join(';')
 
   return [
     ...inputArgs,
     '-filter_complex', filterComplex,
-    '-map', '[vout]',
+    '-map', '[vout_final]',
+    '-map', `${audioInputIndex}:a`,
     '-c:v', 'libx264',
     '-preset', 'fast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
+    '-crf', '22',
+    '-c:a', 'copy', // we just mixed the audio, no need to re-encode
+    '-shortest',    // Audio will be slightly longer or shorter, cap at shortest track
+    '-movflags', '+faststart',
     '-y',
     outputPath,
   ]
@@ -172,3 +235,4 @@ export function buildSimpleConcat(
     outputPath,
   ]
 }
+
