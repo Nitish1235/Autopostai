@@ -49,19 +49,14 @@ export async function handleRenderJob(data: RenderJob) {
     const imageCount = (video.imageUrls ?? []).filter(
       (url) => !!url && url.length > 0
     ).length
-    const voiceCount = script.filter(
-      (seg) => !!seg.audioUrl && seg.audioUrl.length > 0
-    ).length
 
     if (imageCount !== script.length) {
       throw new Error(
         `Video assets incomplete: images ${imageCount}/${script.length}`
       )
     }
-    if (voiceCount !== script.length) {
-      throw new Error(
-        `Video assets incomplete: voice ${voiceCount}/${script.length}`
-      )
+    if (!video.masterAudioUrl) {
+      throw new Error('Video assets incomplete: master audio not found')
     }
 
     // 4. Update RenderJob status

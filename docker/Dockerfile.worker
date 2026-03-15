@@ -27,20 +27,9 @@ ENV NODE_ENV=production
 # Install FFmpeg for video rendering, OpenSSL for Prisma, and Fonts for ASS Subtitles
 RUN apk add --no-cache ffmpeg openssl fontconfig ttf-dejavu ttf-liberation font-noto font-noto-cjk
 
-# Download and install custom Google Fonts for FFmpeg Subtitle Rendering
-RUN mkdir -p /usr/share/fonts/custom && cd /usr/share/fonts/custom && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/Caveat%5Bwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/Nunito%5Bwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Regular.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf" && \
-    wget -q "https://raw.githubusercontent.com/google/fonts/main/apache/permanentmarker/PermanentMarker-Regular.ttf" && \
-    fc-cache -fv
+# Copy pre-bundled custom Google Fonts for FFmpeg Subtitle Rendering
+COPY assets/fonts/ /usr/share/fonts/custom/
+RUN fc-cache -fv
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
