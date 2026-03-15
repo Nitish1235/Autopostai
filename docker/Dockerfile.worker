@@ -28,18 +28,19 @@ ENV NODE_ENV=production
 RUN apk add --no-cache ffmpeg openssl fontconfig ttf-dejavu ttf-liberation font-noto font-noto-cjk
 
 # Download and install custom Google Fonts for FFmpeg Subtitle Rendering
-RUN mkdir -p /usr/share/fonts/custom && cd /tmp && \
-    wget -qO inter.zip "https://fonts.google.com/download?family=Inter" && unzip -q inter.zip -d /usr/share/fonts/custom && \
-    wget -qO bebas.zip "https://fonts.google.com/download?family=Bebas+Neue" && unzip -q bebas.zip -d /usr/share/fonts/custom && \
-    wget -qO caveat.zip "https://fonts.google.com/download?family=Caveat" && unzip -q caveat.zip -d /usr/share/fonts/custom && \
-    wget -qO playfair.zip "https://fonts.google.com/download?family=Playfair+Display" && unzip -q playfair.zip -d /usr/share/fonts/custom && \
-    wget -qO jbmono.zip "https://fonts.google.com/download?family=JetBrains+Mono" && unzip -q jbmono.zip -d /usr/share/fonts/custom && \
-    wget -qO nunito.zip "https://fonts.google.com/download?family=Nunito" && unzip -q nunito.zip -d /usr/share/fonts/custom && \
-    wget -qO barlow.zip "https://fonts.google.com/download?family=Barlow+Condensed" && unzip -q barlow.zip -d /usr/share/fonts/custom && \
-    wget -qO cormorant.zip "https://fonts.google.com/download?family=Cormorant+Garamond" && unzip -q cormorant.zip -d /usr/share/fonts/custom && \
-    wget -qO permanent.zip "https://fonts.google.com/download?family=Permanent+Marker" && unzip -q permanent.zip -d /usr/share/fonts/custom && \
-    wget -qO anton.zip "https://fonts.google.com/download?family=Anton" && unzip -q anton.zip -d /usr/share/fonts/custom && \
-    rm -rf /tmp/*.zip && \
+RUN mkdir -p /usr/share/fonts/custom && cd /usr/share/fonts/custom && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/static/Caveat-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/static/PlayfairDisplay-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/jetbrainsmono/static/JetBrainsMono-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/static/Nunito-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond-Regular.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond-Bold.ttf" && \
+    wget -q "https://raw.githubusercontent.com/google/fonts/main/apache/permanentmarker/PermanentMarker-Regular.ttf" && \
     fc-cache -fv
 
 # Create non-root user
