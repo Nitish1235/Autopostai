@@ -31,33 +31,35 @@ export async function GET(
         // Use the APP_URL for the callback instead of hardcoding localhost
         const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-        // Call PostForMe API to generate a platform-specific OAuth URL
-        // We MUST pass state (userId) and our callback URL so PostForMe
-        // knows where to send the user back after they authenticate on TikTok/Instagram.
+        const body = JSON.stringify({ 
+            platform,
+            // NOTE: redirect_url_override only works with your own OAuth credentials.
+            // When using PostForMe's system credentials (default), you must set the
+            // redirect URL in your PostForMe dashboard at https://app.postforme.dev
+            // to point to: ${APP_URL}/api/platforms/postforme/callback
+        })
+
+        console.log(`[auth/${platform}] Requesting auth URL from PostForMe...`)
+
         const response = await fetch(`${POSTFORME_API_URL}/social-accounts/auth-url`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${POSTFORME_API_KEY}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ 
-                platform,
-                // redirect_url_override: exact field name per the PostForMe API spec
-                // Without this, PostForMe redirects to their OWN app, not ours
-                redirect_url_override: `${APP_URL}/api/platforms/postforme/callback`,
-                // Request feeds permission for analytics in addition to posts
-                permissions: ['posts', 'feeds'],
-            }),
+            body,
         })
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            console.error(`[auth] PostForMe API error:`, response.status, errorData)
+            let errorData: unknown = {}
+            try { errorData = await response.json() } catch { /* empty */ }
+            console.error(`[auth/${platform}] PostForMe API error ${response.status}:`, JSON.stringify(errorData))
             return NextResponse.json(
-                { success: false, error: 'Failed to get platform auth URL' },
+                { success: false, error: `Failed to get platform auth URL (HTTP ${response.status})` },
                 { status: 502 }
             )
         }
+
 
         const data = await response.json()
 
