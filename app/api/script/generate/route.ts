@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { generateScript } from '@/lib/api/openai'
 import { checkCredits } from '@/lib/utils/credits'
 
@@ -38,7 +39,8 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate userId
-    const { userId } = await auth()
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -60,9 +62,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Rate limiting: max 5 per user per hour (skip if Redis not configured or user is admin)
     const redis = await getRedis()
-    const { currentUser } = await import('@clerk/nextjs/server')
-    const user = await currentUser()
-    const email = user?.emailAddresses[0]?.emailAddress
+    const email = session?.user?.email
     const isAdmin = email === 'nitishjain135@gmail.com'
 
     if (redis && !isAdmin) {

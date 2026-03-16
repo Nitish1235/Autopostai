@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { getDailyPostLimit, clampDailyLimit } from '@/lib/utils/plans'
 
@@ -25,7 +26,8 @@ export async function PATCH(
   { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const { userId } = await auth()
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -54,7 +56,7 @@ export async function PATCH(
 
     // Fetch user plan for limit enforcement
     const userRecord = await prisma.user.findUnique({
-      where: { clerkId: userId },
+      where: { id: userId },
       select: { plan: true },
     })
     const plan = userRecord?.plan ?? 'free'

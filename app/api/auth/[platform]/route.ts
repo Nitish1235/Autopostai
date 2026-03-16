@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 const POSTFORME_API_URL = 'https://api.postforme.dev/v1'
 const POSTFORME_API_KEY = process.env.POSTFORME_API_KEY ?? ''
@@ -9,7 +10,8 @@ export async function GET(
     { params }: { params: Promise<{ platform: string }> }
 ) {
     try {
-        const { userId } = await auth()
+        const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
 
         if (!userId) {
             return NextResponse.json(

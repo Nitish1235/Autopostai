@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -12,7 +13,8 @@ const DODO_API_KEY = process.env.DODO_PAYMENTS_API_KEY ?? ''
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth()
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },

@@ -42,20 +42,14 @@ export async function checkAndTriggerRender(
 
   const totalExpected = script.length
 
-  // 3. Count completed images
-  const completedImages = (video.imageUrls ?? []).filter(
-    (url) => !!url && url.length > 0
-  ).length
-
-  // 4. Check completed master voice
+  // 3. Check for master audio
+  // Note: Images are now generated synchronously in scriptWorker before voice is even queued,
+  // so we know images are already attached by the time this is called by voiceWorker.
   const allVoiceReady = !!video.masterAudioUrl
-  const allImagesReady = completedImages === totalExpected
 
-  // 5. If not all ready, log progress and return
-  if (!allImagesReady || !allVoiceReady) {
-    console.log(
-      `[renderTrigger] Waiting... images: ${completedImages}/${totalExpected}, voice: ${allVoiceReady ? 'ready' : 'pending'}`
-    )
+  // 4. If not ready, log progress and return
+  if (!allVoiceReady) {
+    console.log(`[renderTrigger] Waiting... voice: pending for video ${videoId}`)
     return
   }
 

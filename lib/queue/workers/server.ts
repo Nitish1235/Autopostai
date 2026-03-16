@@ -6,7 +6,6 @@ import 'module-alias/register'
 import http from 'http'
 import { Receiver } from '@upstash/qstash'
 import { handleScriptJob } from './scriptWorker'
-import { handleImageJob } from './imageWorker'
 import { handleVoiceJob } from './voiceWorker'
 import { handleRenderJob } from './renderWorker'
 import { handlePublishJob } from './publishWorker'
@@ -71,14 +70,12 @@ async function parseBody(req: http.IncomingMessage): Promise<{ raw: string; pars
 
 const handlers: Record<string, (data: any) => Promise<any>> = {
   '/jobs/script': handleScriptJob,
-  '/jobs/image': handleImageJob,
   '/jobs/voice': handleVoiceJob,
   '/jobs/render': handleRenderJob,
   '/jobs/publish': handlePublishJob,
   '/jobs/ai-video': handleAiVideoJob,
   // Also accept /api/jobs/* paths (from Next.js app dispatch)
   '/api/jobs/script': handleScriptJob,
-  '/api/jobs/image': handleImageJob,
   '/api/jobs/voice': handleVoiceJob,
   '/api/jobs/render': handleRenderJob,
   '/api/jobs/publish': handlePublishJob,

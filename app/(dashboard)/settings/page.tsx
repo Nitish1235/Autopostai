@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import {
   User,
   CreditCard,
@@ -79,7 +79,8 @@ interface UserData {
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const { user: clerkUser } = useUser()
+  const { data: session } = useSession()
+  const sessionUser = session?.user
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -282,16 +283,16 @@ export default function SettingsPage() {
               {/* Avatar + email */}
               <div className="flex items-center gap-4 mb-5">
                 <Avatar
-                  src={user?.image || clerkUser?.imageUrl || undefined}
-                  name={user?.name || clerkUser?.fullName || 'User'}
+                  src={user?.image || sessionUser?.image || undefined}
+                  name={user?.name || sessionUser?.name || 'User'}
                   size="xl"
                 />
                 <div>
                   <p className="text-[15px] font-semibold text-[var(--text-primary)]">
-                    {user?.name || clerkUser?.fullName || 'User'}
+                    {user?.name || sessionUser?.name || 'User'}
                   </p>
                   <p className="text-[13px] text-[var(--text-secondary)]">
-                    {user?.email || clerkUser?.primaryEmailAddress?.emailAddress}
+                    {user?.email || sessionUser?.email}
                   </p>
                   <p className="text-[11px] text-[var(--text-dim)] mt-0.5">
                     Signed in securely

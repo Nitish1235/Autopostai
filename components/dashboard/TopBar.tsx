@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { useUser, useClerk } from '@clerk/nextjs'
+import { useSession, signOut } from 'next-auth/react'
 import { Sun, Moon, Bell, Settings, CreditCard, LogOut, Menu } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Dropdown } from '@/components/ui/dropdown'
@@ -26,8 +26,8 @@ interface TopBarProps {
 function TopBar({ onMobileMenuToggle }: TopBarProps) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { user } = useUser()
-  const { signOut } = useClerk()
+  const { data: session } = useSession()
+  const user = session?.user
 
   const pageTitle =
     PAGE_TITLES[pathname] ||
@@ -90,15 +90,15 @@ function TopBar({ onMobileMenuToggle }: TopBarProps) {
           align="right"
           trigger={
             <Avatar
-              src={user?.imageUrl}
-              name={user?.fullName || user?.primaryEmailAddress?.emailAddress || ''}
+              src={user?.image || undefined}
+              name={user?.name || user?.email || ''}
               size="sm"
               className="cursor-pointer"
             />
           }
           items={[
             {
-              label: user?.fullName || 'User',
+              label: user?.name || 'User',
               icon: undefined,
               onClick: undefined,
             },
@@ -118,7 +118,7 @@ function TopBar({ onMobileMenuToggle }: TopBarProps) {
               label: 'Sign out',
               icon: <LogOut size={14} />,
               variant: 'danger' as const,
-              onClick: () => signOut({ redirectUrl: '/login' }),
+              onClick: () => signOut({ callbackUrl: '/login' }),
             },
           ]}
         />

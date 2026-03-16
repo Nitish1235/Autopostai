@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useUser } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,8 @@ const NAV_LINKS = [
 ]
 
 function Navbar() {
-  const { isLoaded, isSignedIn } = useUser()
+  const { data: session, status } = useSession()
+  const isSignedIn = status === 'authenticated'
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 

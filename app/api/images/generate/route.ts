@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { generateImage } from '@/lib/api/runware'
 import { getModelForStyle } from '@/lib/api/runware'
@@ -27,7 +28,8 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate userId
-    const { userId } = await auth()
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },

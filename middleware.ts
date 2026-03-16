@@ -1,6 +1,5 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 import { Redis } from '@upstash/redis'
 
 // ── Rate Limit Configuration ─────────────────────────
@@ -59,50 +58,45 @@ async function checkRateLimit(
 
 // ── Middleware ────────────────────────────────────────
 
-const isPublicRoute = createRouteMatcher([
+const publicPaths = [
     '/',
-    '/login(.*)',
+    '/login',
     '/about',
     '/blog',
     '/contact',
     '/changelog',
-    '/admin(.*)',
-    '/api/auth(.*)',
-    '/api/admin(.*)',
-    '/api/webhooks(.*)',
-    '/api/inngest(.*)',
+    '/api/auth',
+    '/api/webhooks',
+    '/api/inngest',
     '/api/platforms/postforme/callback',
     '/policy',
     '/terms-service',
-    '/sitemap.xml',
-    '/robots.txt',
-    '/(.*)/_next(.*)',
-    '/favicon.ico',
-    '/logo(.*)',
-    '/images(.*)',
-    '/videos(.*)'
-])
+]
 
-export default clerkMiddleware(async (auth, req: NextRequest) => {
+function isPublicRoute(pathname: string) {
+  return publicPaths.some(path => pathname === path || pathname.startsWith(path + '/'))
+}
+
+export default withAuth(
+  async function middleware(req) {
     const { pathname } = req.nextUrl
+    const token = req.nextauth.token
 
-    if (!isPublicRoute(req)) {
-        await auth.protect()
+    // Make sure unauthenticated users cannot access protected API endpoints
+    if (!token && !isPublicRoute(pathname) && pathname.startsWith('/api/')) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-// ── Rate limiting for specific API routes ──────────
+    // ── Rate limiting for specific API routes ──────────
     for (const [route, config] of Object.entries(RATE_LIMITS)) {
         if (pathname.startsWith(route)) {
-            const { userId } = await auth()
+            const userId = token?.id as string
             if (!userId) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             }
 
             // --- ADMIN BYPASS ---
-            const { clerkClient } = await import('@clerk/nextjs/server')
-            const client = await clerkClient()
-            const user = await client.users.getUser(userId)
-            const email = user?.emailAddresses?.[0]?.emailAddress
+            const email = token?.email as string
             const isAdmin = email === 'nitishjain135@gmail.com'
 
             if (isAdmin) {
@@ -142,7 +136,23 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
 
     return NextResponse.next()
-})
+  },
+  {
+    callbacks: {
+      authorized: ({ req, token }) => {
+        // If it's a public route, allow access without token
+        if (isPublicRoute(req.nextUrl.pathname)) {
+          return true
+        }
+        // Otherwise, require a token for protected routes
+        return !!token
+      },
+    },
+    pages: {
+      signIn: '/login',
+    }
+  }
+)
 
 export const config = {
   matcher: [

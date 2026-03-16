@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { getDailyPostLimit, canAutoPost } from '@/lib/utils/plans'
 
@@ -27,7 +28,8 @@ export async function GET(request: Request) {
         const isSuccess = searchParams.get('isSuccess')
 
         // Require an active Clerk session (user must be logged in)
-        const { userId } = await auth()
+        const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
 
         if (!userId) {
             console.error('[postforme/callback] Unauthenticated callback attempt')
@@ -81,7 +83,7 @@ export async function GET(request: Request) {
 
         // Look up user's plan to set the correct dailyLimit
         const userRecord = await prisma.user.findUnique({
-            where: { clerkId: userId },
+            where: { id: userId },
             select: { plan: true },
         })
         const plan = userRecord?.plan ?? 'free'

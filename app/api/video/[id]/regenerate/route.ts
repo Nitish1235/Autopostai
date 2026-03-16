@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { generateImage } from '@/lib/api/runware'
 import { generateVoiceAndUpload } from '@/lib/api/unrealSpeech'
@@ -28,7 +29,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth()
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },

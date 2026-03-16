@@ -103,6 +103,7 @@ export async function getAuthUrl(platform: string): Promise<string> {
 
 export async function postVideo(params: {
     socialAccountId: string
+    title?: string
     videoUrl: string
     caption: string
     hashtags: string[]
@@ -113,6 +114,7 @@ export async function postVideo(params: {
         params.hashtags.map((t) => `#${t}`).join(' ')
 
     return postForMeFetch<PostForMePostResult>('/social-posts', 'POST', {
+        title: params.title,
         social_accounts: [params.socialAccountId],
         caption: fullCaption,
         media: [{ url: params.videoUrl }],
@@ -137,6 +139,7 @@ export async function postToMultiplePlatforms(params: {
     }>
     videoUrl: string
     caption: string
+    title?: string
     hashtags: string[]
 }): Promise<PostPublishResult[]> {
     const fullCaption =
@@ -153,6 +156,7 @@ export async function postToMultiplePlatforms(params: {
         status: string
         social_accounts: Array<{ id: string; platform: string }>
     }>('/social-posts', 'POST', {
+        title: params.title,
         social_accounts: socialAccountIds,
         caption: fullCaption,
         media: [{ url: params.videoUrl }],

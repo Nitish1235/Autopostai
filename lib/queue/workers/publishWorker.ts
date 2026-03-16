@@ -146,6 +146,7 @@ export async function handlePublishJob(data: PublishJob) {
       try {
         const postForMeResults = await postToMultiplePlatforms({
           platforms: connectedPlatforms,
+          title: video.title,
           videoUrl: video.videoUrl,
           caption: defaultCaption?.caption ?? video.title,
           hashtags: defaultCaption?.hashtags ?? [],
