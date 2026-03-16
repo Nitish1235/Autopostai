@@ -59,11 +59,19 @@ export async function checkAndTriggerRender(
     return
   }
 
-  // 6. Check if already rendering or beyond
-  const renderStatuses = ['rendering', 'ready', 'scheduled', 'posted']
-  if (renderStatuses.includes(video.status)) {
+  // 6. Atomically claim the render slot — prevents TOCTOU race condition
+  //    If two workers call this simultaneously, only one updateMany will match
+  const claimResult = await prisma.video.updateMany({
+    where: {
+      id: videoId,
+      status: { notIn: ['rendering', 'ready', 'scheduled', 'posted', 'failed'] },
+    },
+    data: { status: 'rendering' },
+  })
+
+  if (claimResult.count === 0) {
     console.log(
-      `[renderTrigger] Video ${videoId} already in status: ${video.status}. Skipping.`
+      `[renderTrigger] Video ${videoId} already claimed for rendering or beyond. Skipping.`
     )
     return
   }
@@ -72,12 +80,6 @@ export async function checkAndTriggerRender(
   console.log(
     `[renderTrigger] All assets ready. Queuing render for ${videoId}`
   )
-
-  // Update video status
-  await prisma.video.update({
-    where: { id: videoId },
-    data: { status: 'rendering' },
-  })
 
   // Update RenderJob record
   await prisma.renderJob.update({

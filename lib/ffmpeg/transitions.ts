@@ -37,27 +37,34 @@ const XFADE_MAP: Record<TransitionType, string> = {
 // ── Get Transition for Style ─────────────────────────
 
 export function getTransitionForStyle(imageStyle: string): TransitionType {
-  switch (imageStyle) {
-    case 'cinematic':
-      return 'crossfade'
-    case 'dark_fantasy':
-      return 'fade_black'
-    case 'anime':
-      return 'crossfade'
-    case 'cyberpunk':
-      return 'slide_left'
-    case 'documentary':
-      return 'crossfade'
-    case 'vintage':
-      return 'dip_black'
-    case '3d_render':
-      return 'fade_white'
-    case 'minimal':
-      return 'fade_white'
-    default:
-      return 'crossfade'
-  }
+  // As requested, default everything to a simple fade/crossfade to the next image for now
+  // to avoid repetitive stylistic loops like sliding left 10 times in a row.
+  return 'crossfade'
 }
+
+// export function getTransitionForStyle(imageStyle: string): TransitionType {
+//    switch (imageStyle) {
+//     case 'cinematic':
+//       return 'crossfade'
+//     case 'dark_fantasy':
+//       return 'fade_black'
+//     case 'anime':
+//       return 'crossfade'
+//     case 'cyberpunk':
+//       return 'slide_left'
+//     case 'documentary':
+//       return 'crossfade'
+//     case 'vintage':
+//       return 'dip_black'
+//     case '3d_render':
+//       return 'fade_white'
+//     case 'minimal':
+//       return 'fade_white'
+//     default:
+//   // As requested, default everything to a simple fade/crossfade to the next image for now
+//   // to avoid repetitive stylistic loops like sliding left 10 times in a row.
+//   return 'crossfade'
+// }
 
 // ── Get Transition Duration ──────────────────────────
 
@@ -125,9 +132,9 @@ export function buildMegaRenderCommand(params: {
   const inputArgs: string[] = []
   imagePaths.forEach((p, i) => {
     // Limit input duration slightly to prevent infinite loops before filter applies
-    inputArgs.push('-loop', '1', '-t', (durations[i] + 1).toString(), '-i', p) 
+    inputArgs.push('-loop', '1', '-t', (durations[i] + 1).toString(), '-i', p)
   })
-  
+
   // Audio is the last input
   const audioInputIndex = imagePaths.length
   inputArgs.push('-i', audioPath)
@@ -143,10 +150,10 @@ export function buildMegaRenderCommand(params: {
       width: 1080,
       height: 1920,
     })
-    
+
     // Convert duration to frames exactly
     const durationFrames = Math.ceil(durations[i] * fps)
-    
+
     filterParts.push(
       `[${i}:v]scale=1200:2133:force_original_aspect_ratio=increase,crop=1200:2133,${kenBurns},scale=1080:1920,setsar=1,settb=1/${fps},format=yuv420p,trim=duration=${durations[i]}[v${i}]`
     )
@@ -159,15 +166,15 @@ export function buildMegaRenderCommand(params: {
 
   if (imagePaths.length > 1) {
     for (let i = 1; i < imagePaths.length; i++) {
-        cumulativeOffset += durations[i - 1]
-        const offset = Math.max(0, cumulativeOffset - i * transitionDuration)
-        
-        const outputLabel = i === imagePaths.length - 1 ? 'vout_xfade' : `v_concat${i}`
-        
-        filterParts.push(
-            `[${prevLabel}][v${i}]xfade=transition=${xfadeType}:duration=${transitionDuration}:offset=${offset.toFixed(3)}[${outputLabel}]`
-        )
-        prevLabel = outputLabel
+      cumulativeOffset += durations[i - 1]
+      const offset = Math.max(0, cumulativeOffset - i * transitionDuration)
+
+      const outputLabel = i === imagePaths.length - 1 ? 'vout_xfade' : `v_concat${i}`
+
+      filterParts.push(
+        `[${prevLabel}][v${i}]xfade=transition=${xfadeType}:duration=${transitionDuration}:offset=${offset.toFixed(3)}[${outputLabel}]`
+      )
+      prevLabel = outputLabel
     }
   } else {
     // If only one image, just pass it through
@@ -177,18 +184,20 @@ export function buildMegaRenderCommand(params: {
 
   // Step 3: Color Grading & Subtitles
   const colorGrade = getColorGradeFilter(imageStyle)
-  
+
   let finalEffectsFilter = colorGrade
-  
+
   if (assSubtitlePath) {
-     // Escape the path for FFmpeg ass filter
-     const escapedAssPath = assSubtitlePath.replace(/\\/g, '/').replace(/:/g, '\\\\:')
-     // Subtitles ALWAYS go last after color grading to prevent distortion
-     finalEffectsFilter += `,ass='${escapedAssPath}'`
+    // Escape the path for FFmpeg ass filter
+    const escapedAssPath = assSubtitlePath.replace(/\\/g, '/').replace(/:/g, '\\\\:')
+    // Fonts directory
+    const fontsDir = path.join(process.cwd(), 'assets', 'fonts').replace(/\\/g, '/').replace(/:/g, '\\\\:')
+    // Subtitles ALWAYS go last after color grading to prevent distortion
+    finalEffectsFilter += `,ass='${escapedAssPath}':fontsdir='${fontsDir}'`
   }
 
   filterParts.push(`[${prevLabel}]${finalEffectsFilter}[vout_final]`)
-  
+
   const filterComplex = filterParts.join(';')
 
   return [

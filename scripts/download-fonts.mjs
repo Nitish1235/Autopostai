@@ -3,17 +3,17 @@ import path from 'path'
 import https from 'https'
 
 const fonts = [
-  { name: 'Anton-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf' },
-  { name: 'Inter-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/inter/static/Inter-Regular.ttf' },
-  { name: 'BebasNeue-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf' },
-  { name: 'Caveat-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/static/Caveat-Regular.ttf' },
-  { name: 'PlayfairDisplay-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/static/PlayfairDisplay-Regular.ttf' },
-  { name: 'JetBrainsMono-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/jetbrainsmono/static/JetBrainsMono-Regular.ttf' },
-  { name: 'Nunito-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/static/Nunito-Regular.ttf' },
-  { name: 'BarlowCondensed-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Regular.ttf' },
-  { name: 'CormorantGaramond-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond-Regular.ttf' },
-  { name: 'PermanentMarker-Regular.ttf', url: 'https://raw.githubusercontent.com/google/fonts/main/apache/permanentmarker/PermanentMarker-Regular.ttf' },
-  { name: 'Impact.ttf', url: 'https://raw.githubusercontent.com/fedelibre/Impact-Font/master/impact.ttf' },
+  { name: 'Anton-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/anton@5.0.8/files/anton-latin-400-normal.woff' },
+  { name: 'Inter-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff' },
+  { name: 'BebasNeue-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/bebas-neue@5.0.12/files/bebas-neue-latin-400-normal.woff' },
+  { name: 'Caveat-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/caveat@5.0.20/files/caveat-latin-400-normal.woff' },
+  { name: 'PlayfairDisplay-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5.0.21/files/playfair-display-latin-400-normal.woff' },
+  { name: 'JetBrainsMono-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.20/files/jetbrains-mono-latin-400-normal.woff' },
+  { name: 'Nunito-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/nunito@5.0.13/files/nunito-latin-400-normal.woff' },
+  { name: 'BarlowCondensed-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5.0.13/files/barlow-condensed-latin-400-normal.woff' },
+  { name: 'CormorantGaramond-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond@5.0.12/files/cormorant-garamond-latin-400-normal.woff' },
+  { name: 'PermanentMarker-Regular.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/permanent-marker@5.0.12/files/permanent-marker-latin-400-normal.woff' },
+  { name: 'Impact.ttf', url: 'https://cdn.jsdelivr.net/npm/@fontsource/anton@5.0.8/files/anton-latin-400-normal.woff' },
 ]
 
 const dir = path.join(process.cwd(), 'assets', 'fonts')

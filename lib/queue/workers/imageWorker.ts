@@ -24,6 +24,23 @@ export async function handleImageJob(data: ImageJob) {
   )
 
   try {
+    // 0. Idempotency Check: Prevent duplicate image generation on QStash retries
+    const existing = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { imageUrls: true, status: true },
+    })
+
+    if (existing?.status === 'failed') {
+      console.log(`[imageWorker] Video ${videoId} already failed. Skipping.`)
+      return { success: true, skipped: true, reason: 'video_failed' }
+    }
+
+    const existingUrl = existing?.imageUrls?.[segmentIndex]
+    if (existingUrl && existingUrl.length > 0) {
+      console.log(`[imageWorker] Image for segment ${segmentIndex} of ${videoId} already exists. Skipping duplicate.`)
+      await checkAndTriggerRender(videoId, userId)
+      return { success: true, skipped: true, reason: 'idempotency_lock' }
+    }
     // 1. Generate image via Runware
     const result = await generateImage({
       positivePrompt: imagePrompt,
@@ -101,6 +118,38 @@ export async function handleImageJob(data: ImageJob) {
     console.error(
       `[imageWorker] Image generation failed for segment ${segmentIndex} of ${videoId}: ${message}`
     )
+
+    // Mark video and renderJob as failed so the pipeline doesn't hang forever
+    try {
+      const failedVideo = await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          status: 'failed',
+          errorMessage: `Image generation failed for segment ${segmentIndex}: ${message}`,
+        },
+      })
+      await prisma.renderJob.update({
+        where: { videoId },
+        data: {
+          status: 'failed',
+          errorMessage: `Image segment ${segmentIndex} failed: ${message}`,
+          completedAt: new Date(),
+        },
+      })
+
+      // Refund credit for autopilot-generated videos
+      if (failedVideo.topicQueueId) {
+        const { addCredits } = await import('@/lib/utils/credits')
+        await addCredits(
+          failedVideo.userId,
+          1,
+          'refund',
+          'Image generation failed — autopilot credit returned'
+        ).catch((e) => console.error('[imageWorker] Credit refund failed:', e))
+      }
+    } catch (dbError) {
+      console.error('[imageWorker] Failed to update failure status in DB:', dbError)
+    }
 
     throw error
   }

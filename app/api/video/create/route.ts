@@ -192,16 +192,6 @@ export async function POST(request: NextRequest) {
           subtitleConfig: aiAudioMode === 'replace' ? subtitleConfig : undefined,
         })
       } else {
-        // Create RenderJob record
-        await prisma.renderJob.create({
-          data: {
-            videoId: video.id,
-            status: 'queued',
-            stage: 'script',
-            progress: 0,
-          },
-        })
-
         const segmentCount = getSegmentCount(format)
         // FIX #3: Pass user-edited script so the worker skips re-generation
         await addVideoToQueue(

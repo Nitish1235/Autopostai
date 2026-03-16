@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plug2, RefreshCw } from 'lucide-react'
 import { PlatformCard, type PlatformStatus } from '@/components/platforms/PlatformCard'
@@ -11,6 +12,27 @@ import { useToast } from '@/components/ui/toast'
 import type { Platform } from '@/types'
 
 const ALL_PLATFORMS: Platform[] = ['tiktok', 'instagram', 'youtube', 'x']
+
+function PlatformAlerts() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const error = searchParams.get('error')
+
+    if (success) {
+      toast({ message: `Successfully connected ${success}`, type: 'success' })
+      router.replace('/platforms')
+    } else if (error) {
+      toast({ message: `Failed to connect: ${error}`, type: 'error' })
+      router.replace('/platforms')
+    }
+  }, [searchParams, toast, router])
+
+  return null
+}
 
 export default function PlatformsPage() {
   const { toast } = useToast()
@@ -139,6 +161,9 @@ export default function PlatformsPage() {
 
   return (
     <div className="px-8 py-7 max-w-[1200px]">
+      <Suspense fallback={null}>
+        <PlatformAlerts />
+      </Suspense>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

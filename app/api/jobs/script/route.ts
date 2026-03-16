@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleScriptJob } from '@/lib/queue/workers/scriptWorker'
+import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 
 // ── POST /api/jobs/script ────────────────────────────
 // QStash delivers script generation jobs here.
 
-export async function POST(request: NextRequest) {
+async function handler(request: NextRequest) {
+  if (process.env.START_AS_WORKER !== 'true') {
+     console.error('[jobs/script] Rejected: Container is not running in WORKER mode')
+     return NextResponse.json({ success: false, error: 'Target is not a worker' }, { status: 400 })
+  }
+
   try {
     const data = await request.json()
     console.log(`[jobs/script] Received job for video: ${data.videoId}`)
@@ -19,3 +25,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export const POST = verifySignatureAppRouter(handler)

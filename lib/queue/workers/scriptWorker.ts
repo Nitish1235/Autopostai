@@ -28,6 +28,20 @@ export async function handleScriptJob(data: ScriptJob) {
   console.log(`[scriptWorker] Starting script generation for ${videoId}`)
 
   try {
+    // 0. Idempotency Check: Prevent double-execution on QStash retries
+    const existingVideo = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { status: true },
+    })
+
+    if (!existingVideo) {
+      throw new Error(`Video not found: ${videoId}`)
+    }
+
+    if (existingVideo.status !== 'pending' && existingVideo.status !== 'generating_script') {
+       console.log(`[scriptWorker] Job already processed. Current status: ${existingVideo.status}. Skipping.`)
+       return { success: true, skipped: true, reason: 'idempotency_lock' }
+    }
     // 1. Update status
     await prisma.video.update({
       where: { id: videoId },

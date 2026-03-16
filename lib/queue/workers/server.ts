@@ -4,6 +4,7 @@
 
 import 'module-alias/register'
 import http from 'http'
+import { Receiver } from '@upstash/qstash'
 import { handleScriptJob } from './scriptWorker'
 import { handleImageJob } from './imageWorker'
 import { handleVoiceJob } from './voiceWorker'
@@ -13,16 +14,51 @@ import { handleAiVideoJob } from './aiVideoWorker'
 
 const PORT = Number(process.env.PORT) || 8080
 
+// ── QStash Signature Verification ────────────────────
+// Ensures that only QStash (not random attackers) can invoke worker endpoints.
+
+const receiver = new Receiver({
+  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY || '',
+  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY || '',
+})
+
+const isDev = !process.env.QSTASH_CURRENT_SIGNING_KEY
+
+async function verifyQStashSignature(req: http.IncomingMessage, rawBody: string): Promise<boolean> {
+  // Skip verification in development (no signing keys configured)
+  if (isDev) {
+    console.log('[worker] ⚠️ DEV MODE: Skipping QStash signature verification')
+    return true
+  }
+
+  const signature = req.headers['upstash-signature'] as string
+  if (!signature) {
+    console.error('[worker] ❌ Missing Upstash-Signature header')
+    return false
+  }
+
+  try {
+    await receiver.verify({
+      signature,
+      body: rawBody,
+    })
+    return true
+  } catch (error) {
+    console.error('[worker] ❌ QStash signature verification failed:', error)
+    return false
+  }
+}
+
 // ── Simple JSON body parser ──────────────────────────
 
-async function parseBody(req: http.IncomingMessage): Promise<any> {
+async function parseBody(req: http.IncomingMessage): Promise<{ raw: string; parsed: any }> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     req.on('data', (chunk: Buffer) => chunks.push(chunk))
     req.on('end', () => {
       try {
         const raw = Buffer.concat(chunks).toString('utf-8')
-        resolve(raw ? JSON.parse(raw) : {})
+        resolve({ raw, parsed: raw ? JSON.parse(raw) : {} })
       } catch (e) {
         reject(e)
       }
@@ -78,11 +114,20 @@ const server = http.createServer(async (req, res) => {
 
   try {
     // Parse the QStash payload
-    const body = await parseBody(req)
-    console.log(`[worker] Received job on ${url}:`, JSON.stringify(body).slice(0, 200))
+    const { raw, parsed } = await parseBody(req)
+
+    // Verify QStash signature before executing any job
+    const isValid = await verifyQStashSignature(req, raw)
+    if (!isValid) {
+      res.writeHead(401, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Unauthorized — invalid QStash signature' }))
+      return
+    }
+
+    console.log(`[worker] Received job on ${url}:`, JSON.stringify(parsed).slice(0, 200))
 
     // Execute the job handler
-    const result = await handler(body)
+    const result = await handler(parsed)
 
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ success: true, result }))

@@ -19,6 +19,22 @@ export async function handleVoiceJob(data: VoiceJob) {
   )
 
   try {
+    // 0. Idempotency Check: Prevent duplicate TTS generation on QStash retries
+    const existing = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { masterAudioUrl: true, status: true },
+    })
+
+    if (existing?.masterAudioUrl) {
+      console.log(`[voiceWorker] Master audio already exists for ${videoId}. Skipping duplicate.`)
+      await checkAndTriggerRender(videoId, userId)
+      return { success: true, skipped: true, reason: 'idempotency_lock' }
+    }
+
+    if (existing?.status === 'failed') {
+      console.log(`[voiceWorker] Video ${videoId} already failed. Skipping.`)
+      return { success: true, skipped: true, reason: 'video_failed' }
+    }
     // 1. Generate voice and upload to GCS (master track)
     const result = await generateVoiceAndUpload({
       text: narration,

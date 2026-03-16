@@ -21,6 +21,7 @@ export async function handleRenderJob(data: RenderJob) {
       select: {
         id: true,
         status: true,
+        videoUrl: true,
         format: true,
         imageStyle: true,
         script: true,
@@ -37,6 +38,12 @@ export async function handleRenderJob(data: RenderJob) {
 
     if (!video) {
       throw new Error(`Video not found: ${videoId}`)
+    }
+
+    // 1.5 Idempotency Check: Prevent duplicate renders on QStash retries
+    if (video.status === 'rendering' || video.status === 'ready' || video.status === 'posted' || video.videoUrl) {
+       console.log(`[renderWorker] Video ${videoId} is already rendering or rendered (status: ${video.status}). Skipping duplicate job.`)
+       return { success: true, skipped: true, reason: 'idempotency_lock' }
     }
 
     // 2. Parse script

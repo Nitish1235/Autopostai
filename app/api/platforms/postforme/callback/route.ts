@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -16,10 +17,23 @@ export async function GET(request: Request) {
         const displayName = searchParams.get('display_name') || searchParams.get('name')
         const avatarUrl = searchParams.get('avatar_url') || searchParams.get('profile_image_url')
 
-        // We need to identify which user this callback belongs to.
-        // PostForMe may return a state param if we passed one, otherwise
-        // we look for it in the referrer or a cookie.
-        const userId = searchParams.get('state')
+        // We strictly require an active Clerk session to prevent CSRF spoofing attacks.
+        // If an attacker guesses a victim's userId and passes it as 'state', we would 
+        // mistakenly link the attacker's social account to the victim.
+        const { userId: sessionUserId } = await auth()
+        
+        if (!sessionUserId) {
+            console.error('[postforme/callback] Unauthenticated callback attempt')
+            return NextResponse.redirect(`${APP_URL}/login?error=unauthorized_connection`)
+        }
+
+        const stateUserId = searchParams.get('state')
+        if (stateUserId && stateUserId !== sessionUserId) {
+             console.error('[postforme/callback] State spoofing thwarted. Session does not match state.')
+             return NextResponse.redirect(`${APP_URL}/platforms?error=session_mismatch`)
+        }
+
+        const userId = sessionUserId
 
         if (error) {
             return NextResponse.redirect(`${APP_URL}/platforms?error=${error}`)
