@@ -15,8 +15,8 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Compile TypeScript workers
-RUN npx tsc --project tsconfig.worker.json || true
+# Compile TypeScript workers (fail-fast: no || true)
+RUN npx tsc --project tsconfig.worker.json
 
 # ── Stage 3: Production image ─────────────────────────
 FROM --platform=linux/amd64 node:20-alpine AS runner

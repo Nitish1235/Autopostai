@@ -28,6 +28,7 @@
         "lib/queue/**/*.ts",
         "lib/db/**/*.ts",
         "lib/api/**/*.ts",
+        "lib/prompts/**/*.ts",
         "lib/ffmpeg/**/*.ts",
         "lib/gcs/**/*.ts",
         "lib/music/**/*.ts",

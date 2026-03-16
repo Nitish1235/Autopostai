@@ -37,8 +37,8 @@ ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
 # Build Next.js (standalone output)
 RUN npm run build
 
-# Compile TypeScript workers
-RUN npx tsc --project tsconfig.worker.json || true
+# Compile TypeScript workers (fail-fast: no || true)
+RUN npx tsc --project tsconfig.worker.json
 
 # ── Stage 3: Production image ─────────────────────────
 FROM --platform=linux/amd64 node:20-alpine AS runner
@@ -46,8 +46,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install OS dependencies: FFmpeg for video processing, OpenSSL for Prisma
-RUN apk add --no-cache ffmpeg openssl
+# Install OS dependencies: OpenSSL for Prisma (no FFmpeg — web container doesn't render)
+RUN apk add --no-cache openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -60,12 +60,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy full node_modules because workers need them
+# Copy node_modules for the Next.js standalone server
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# Copy compiled worker files (Background Workers)
-COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 
 # Copy Prisma client (needed at runtime by both)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma

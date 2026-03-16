@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     'fluent-ffmpeg',
     '@prisma/client',
-    'bullmq'
   ],
   images: {
     remotePatterns: [
