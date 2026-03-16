@@ -9,20 +9,29 @@ const API_KEY = process.env.POSTFORME_API_KEY || ''
 
 // ── Interfaces ───────────────────────────────────────
 
+// Matches SocialPostResultDto from the PostForMe OpenAPI spec
+// This is returned per published account from /v1/social-post-results
 export interface PostForMePostResult {
-    id: string
-    platform: string
-    url: string
-    status: string
+    id: string                        // PostForMe result ID
+    social_account_id: string        // spc_xxx ID
+    post_id: string
+    success: boolean
+    error?: unknown
+    platform_data?: {
+        id?: string                   // Platform-specific post ID
+        url?: string                  // URL of the published content
+    }
 }
 
+// Matches SocialAccountDto from the PostForMe OpenAPI spec
 export interface PostForMeSocialAccount {
     id: string
     platform: string
-    username: string
-    display_name: string
-    profile_image_url: string
-    followers_count: number
+    username: string | null       // The platform's username (nullable per spec)
+    user_id: string               // The platform's internal user ID
+    profile_photo_url: string | null  // Profile photo URL (nullable per spec)
+    status: 'connected' | 'disconnected'
+    external_id: string | null
 }
 
 // ── HTTP Helper ──────────────────────────────────────
@@ -111,7 +120,15 @@ export async function postVideo(params: {
 }
 
 // ── Post to Multiple Platforms ───────────────────────
-// Creates a post for each social account via PostForMe
+// Sends all accounts in ONE call to POST /v1/social-posts
+// Returns one result object per platform for the publisher to track
+
+export interface PostPublishResult {
+    platform: string
+    postId: string     // PostForMe post ID (sp_ prefix)
+    success: boolean
+    url?: string
+}
 
 export async function postToMultiplePlatforms(params: {
     platforms: Array<{
@@ -121,32 +138,34 @@ export async function postToMultiplePlatforms(params: {
     videoUrl: string
     caption: string
     hashtags: string[]
-}): Promise<PostForMePostResult[]> {
+}): Promise<PostPublishResult[]> {
     const fullCaption =
         params.caption +
         '\n\n' +
         params.hashtags.map((t) => `#${t}`).join(' ')
 
-    // PostForMe supports multiple social_accounts in one call
+    // PostForMe supports all accounts in one POST /social-posts call
     const socialAccountIds = params.platforms.map((p) => p.socialAccountId)
 
-    try {
-        const result = await postForMeFetch<PostForMePostResult>('/social-posts', 'POST', {
-            social_accounts: socialAccountIds,
-            caption: fullCaption,
-            media: [{ url: params.videoUrl }],
-        })
+    // SocialPostDto shape: { id, status, caption, social_accounts, media, ... }
+    const result = await postForMeFetch<{
+        id: string
+        status: string
+        social_accounts: Array<{ id: string; platform: string }>
+    }>('/social-posts', 'POST', {
+        social_accounts: socialAccountIds,
+        caption: fullCaption,
+        media: [{ url: params.videoUrl }],
+    })
 
-        // Map the single result to per-platform results
-        return params.platforms.map((p) => ({
-            ...result,
-            platform: p.platform,
-        }))
-    } catch (error) {
-        console.error('[postforme] Failed to post:', error)
-        throw error
-    }
+    // Map per-platform results — all accounts published in a single post
+    return params.platforms.map((p) => ({
+        platform: p.platform,
+        postId: result.id,
+        success: result.status !== 'draft',
+    }))
 }
+
 
 // ── Get Post Analytics ───────────────────────────────
 

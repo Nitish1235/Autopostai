@@ -1,4 +1,4 @@
-import { postToMultiplePlatforms } from '@/lib/api/postforme'
+import { postToMultiplePlatforms, type PostPublishResult } from '@/lib/api/postforme'
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
@@ -152,14 +152,13 @@ export async function handlePublishJob(data: PublishJob) {
         })
 
         for (const result of postForMeResults) {
-          successfulPlatforms.push(result.platform)
-        }
-
-        for (const cp of connectedPlatforms) {
-          if (!successfulPlatforms.includes(cp.platform)) {
-            failedPlatforms.push(cp.platform)
+          if (result.success) {
+            successfulPlatforms.push(result.platform)
+          } else {
+            failedPlatforms.push(result.platform)
           }
         }
+
       } catch {
         for (const cp of connectedPlatforms) {
           failedPlatforms.push(cp.platform)

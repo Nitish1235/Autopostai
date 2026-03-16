@@ -42,8 +42,11 @@ export async function GET(
             },
             body: JSON.stringify({ 
                 platform,
-                state: userId, // extremely important: returned to our callback
-                redirect_url: `${APP_URL}/api/platforms/postforme/callback`
+                // redirect_url_override: exact field name per the PostForMe API spec
+                // Without this, PostForMe redirects to their OWN app, not ours
+                redirect_url_override: `${APP_URL}/api/platforms/postforme/callback`,
+                // Request feeds permission for analytics in addition to posts
+                permissions: ['posts', 'feeds'],
             }),
         })
 
