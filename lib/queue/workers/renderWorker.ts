@@ -40,9 +40,9 @@ export async function handleRenderJob(data: RenderJob) {
       throw new Error(`Video not found: ${videoId}`)
     }
 
-    // 1.5 Idempotency Check: Prevent duplicate renders on QStash retries
-    if (video.status === 'rendering' || video.status === 'ready' || video.status === 'posted' || video.videoUrl) {
-       console.log(`[renderWorker] Video ${videoId} is already rendering or rendered (status: ${video.status}). Skipping duplicate job.`)
+    // 1.5 Idempotency Check: If video is already done, skip
+    if (video.status === 'ready' || video.status === 'posted' || video.videoUrl) {
+       console.log(`[renderWorker] Video ${videoId} is already rendered (status: ${video.status}). Skipping duplicate job.`)
        return { success: true, skipped: true, reason: 'idempotency_lock' }
     }
 
@@ -66,14 +66,20 @@ export async function handleRenderJob(data: RenderJob) {
       throw new Error('Video assets incomplete: master audio not found')
     }
 
-    // 4. Update RenderJob status
-    await prisma.renderJob.update({
-      where: { videoId },
+    // 4. Atomically claim the renderJob — prevents duplicate FFmpeg on QStash retries
+    //    Only the first request will match status='queued', retries see 'processing' and get count=0
+    const claimResult = await prisma.renderJob.updateMany({
+      where: { videoId, status: { in: ['queued', 'render'] } },
       data: {
         status: 'processing',
         startedAt: new Date(),
       },
     })
+
+    if (claimResult.count === 0) {
+      console.log(`[renderWorker] RenderJob for ${videoId} already claimed (processing/completed). Skipping duplicate.`)
+      return { success: true, skipped: true, reason: 'idempotency_lock' }
+    }
 
     // 5. Execute render
     const result = await renderVideo({
