@@ -22,6 +22,11 @@ ARG UPSTASH_REDIS_REST_URL="https://dummy.url"
 ARG UPSTASH_REDIS_REST_TOKEN="dummy_token"
 ARG REDIS_URL="redis://dummy:6379"
 
+# QStash SDK requires these at build time (verifySignatureAppRouter pre-renders)
+ENV QSTASH_TOKEN="dummy_qstash_token_for_build"
+ENV QSTASH_CURRENT_SIGNING_KEY="dummy_signing_key_for_build"
+ENV QSTASH_NEXT_SIGNING_KEY="dummy_signing_key_for_build"
+
 # Inject Clerk public keys for frontend build
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
