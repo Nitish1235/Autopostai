@@ -18,7 +18,7 @@ export type Events = {
     data: { userId: string; niche: string; count: number }
   }
   'analytics/sync': {
-    data: { userId: string; videoId: string }
+    data: { videoId: string; userId: string }
   }
   'report/weekly': {
     data: { userId: string }

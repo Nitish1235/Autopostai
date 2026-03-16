@@ -217,7 +217,8 @@ export async function generateCaptions(params: {
         },
         {
           role: 'user',
-          content: `Write a ${platform} caption for a video about: ${topic}. Niche: ${niche}. Title: ${title}.
+          content: `Write a ${platform} caption for a video about: ${topic}. Title: ${title}.
+${niche === 'custom' ? '' : `Niche: ${niche}.`}
 
 Return JSON: {
   "caption": "engaging caption text",
@@ -229,7 +230,7 @@ Rules:
 - TikTok/Instagram: conversational, emoji allowed, max 150 chars for caption
 - YouTube: SEO-optimized, include keywords, max 500 chars
 - X: punchy, max 240 chars
-- Hashtags: mix of niche + trending + broad
+- Hashtags: mix of ${niche === 'custom' ? 'trending + broad + topic-specific' : 'niche + trending + broad'}
 - CTA: "Follow for more" / "Part 2 tomorrow" etc`,
         },
       ],

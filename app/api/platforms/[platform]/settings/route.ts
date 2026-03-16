@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { getDailyPostLimit, clampDailyLimit } from '@/lib/utils/plans'
 
 const VALID_PLATFORMS = ['tiktok', 'instagram', 'youtube', 'x']
 
 // ── Schema ───────────────────────────────────────────
+// Note: dailyLimit max is enforced server-side per plan (not fixed at 10)
 
 const SettingsSchema = z.object({
   autoPost: z.boolean().optional(),
-  dailyLimit: z.number().int().min(1).max(10).optional(),
+  dailyLimit: z.number().int().min(1).max(10).optional(), // hard cap at 10, plan cap applied below
   postWindow: z
     .string()
     .regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, 'Format: HH:MM-HH:MM')
@@ -50,6 +52,14 @@ export async function PATCH(
       )
     }
 
+    // Fetch user plan for limit enforcement
+    const userRecord = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { plan: true },
+    })
+    const plan = userRecord?.plan ?? 'free'
+    const planMax = getDailyPostLimit(plan)
+
     // Find connection
     const connection = await prisma.platformConnection.findUnique({
       where: {
@@ -67,10 +77,25 @@ export async function PATCH(
       )
     }
 
-    // Build update
+    // Free users cannot enable autoPost or set any dailyLimit
+    if (plan === 'free') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Auto-posting requires a paid plan. Upgrade to Starter or above.',
+          planRequired: 'starter',
+        },
+        { status: 403 }
+      )
+    }
+
+    // Build update — clamp dailyLimit to plan max
     const updateData: Record<string, unknown> = {}
     if (parsed.data.autoPost !== undefined) updateData.autoPost = parsed.data.autoPost
-    if (parsed.data.dailyLimit !== undefined) updateData.dailyLimit = parsed.data.dailyLimit
+    if (parsed.data.dailyLimit !== undefined) {
+      // Silently clamp to plan max — don't let users exceed their tier
+      updateData.dailyLimit = clampDailyLimit(parsed.data.dailyLimit, plan)
+    }
     if (parsed.data.postWindow !== undefined) updateData.postWindow = parsed.data.postWindow
 
     const updated = await prisma.platformConnection.update({
@@ -104,7 +129,11 @@ export async function PATCH(
       },
     })
 
-    return NextResponse.json({ success: true, data: updated })
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      planMax,  // return plan max so UI can update slider without a page refresh
+    })
   } catch (error) {
     console.error('[platforms/settings] Error:', error)
     return NextResponse.json(

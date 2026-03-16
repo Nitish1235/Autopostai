@@ -8,32 +8,30 @@ import { scheduledPublish } from '@/lib/inngest/functions/scheduledPublish'
 import { onVideoCreated } from '@/lib/inngest/functions/videoCreated'
 import { onVideoReady } from '@/lib/inngest/functions/videoReady'
 import { subscriptionExpiry } from '@/lib/inngest/functions/subscriptionExpiry'
+import { onVideoPosted } from '@/lib/inngest/functions/onVideoPosted'
 
-// ── Deployment Splitting Logic ─────────────────────────
-// To prevent the Web Frontend from crashing during massive load, we only
-// attach the background worker functions if the container is explicitly told
-// to start as a worker via the START_AS_WORKER environment variable.
+// ── ALL functions registered on the web container ──────────────────────────
+// 
+// The worker container is a raw Node HTTP server for QStash video processing.
+// It does NOT have an Inngest endpoint. Inngest calls back to the web URL
+// (https://autopostai.video/api/webhooks/inngest), so all functions MUST
+// be registered here on the web container.
+//
+// DO NOT split functions between containers — Inngest is not QStash.
 
-const isWorker = process.env.START_AS_WORKER === 'true'
+const functions = [
+  generateTopicsFunction,
+  autopilotCron,
+  analyticsPoll,
+  weeklyReport,
+  scheduledPublish,
+  onVideoCreated,
+  onVideoReady,
+  onVideoPosted,      // analytics/sync — triggered right after posting
+  subscriptionExpiry,
+]
 
-const functions = isWorker
-  ? [
-      generateTopicsFunction,
-      autopilotCron,
-      analyticsPoll,
-      weeklyReport,
-      scheduledPublish,
-      onVideoCreated,
-      onVideoReady,
-      subscriptionExpiry,
-    ]
-  : [] // Frontend containers host 0 workers
-
-if (!isWorker) {
-  console.log('[inngest] Starting in WEB mode (No background functions attached to this container)')
-} else {
-  console.log('[inngest] Starting in WORKER mode (All background functions attached to this container)')
-}
+console.log(`[inngest] Serving ${functions.length} functions`)
 
 export const { GET, POST, PUT } = serve({
   client: inngest,

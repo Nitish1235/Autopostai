@@ -134,7 +134,11 @@ export default function AutopilotPage() {
   const handleToggle = useCallback(async () => {
     setToggling(true)
     try {
-      const res = await fetch('/api/autopilot/toggle', { method: 'PATCH' })
+      const res = await fetch('/api/autopilot/toggle', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !enabled })
+      })
       const data = await res.json()
       if (data.success) {
         setEnabled(!enabled)

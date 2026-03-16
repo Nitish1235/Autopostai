@@ -71,7 +71,8 @@ export const onVideoReady = inngest.createFunction(
     // Step 3 — Handle autopilot posting
     await step.run('handle-autopilot-posting', async () => {
       if (approvalMode === 'autopilot') {
-        // Immediately add to publish queue
+        // Immediately add ONE combined publish job for ALL platforms
+        // publishWorker calls PostForMe once with all social account IDs
         const connectedPlatforms = user.platformConnections.map(
           (c) => c.platform
         )
@@ -80,20 +81,13 @@ export const onVideoReady = inngest.createFunction(
           connectedPlatforms.includes(p)
         )
 
-        for (const platform of platforms) {
-          const connection = user.platformConnections.find(
-            (c) => c.platform === platform
-          )
-          if (!connection?.accessToken) continue
-
+        if (platforms.length > 0) {
           await enqueueJob('/api/jobs/publish', {
             videoId: video.id,
             userId,
-            platforms: [platform],
+            platforms,
           })
         }
-
-        // publishWorker sets status → 'posted' on success
       }
     })
 
@@ -119,20 +113,14 @@ export const onVideoReady = inngest.createFunction(
             connectedPlatforms.includes(p)
           )
 
-          for (const platform of platforms) {
-            const connection = user.platformConnections.find(
-              (c) => c.platform === platform
-            )
-            if (!connection?.accessToken) continue
-
+          if (platforms.length > 0) {
+            // One combined job for all platforms
             await enqueueJob('/api/jobs/publish', {
               videoId: video.id,
               userId,
-              platforms: [platform],
+              platforms,
             })
           }
-
-          // publishWorker sets status → 'posted' on success
         }
       })
     }

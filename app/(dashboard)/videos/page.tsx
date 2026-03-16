@@ -239,7 +239,32 @@ export default function VideosPage() {
             <div className="mt-4">
               {drawerTab === 'details' && (
                 <div className="space-y-4">
-                  {selectedVideo.thumbnailUrl && (
+                  {selectedVideo.videoUrl ? (
+                    <div className="rounded-[8px] overflow-hidden bg-[var(--bg-card)] border border-[var(--border)]">
+                      <video
+                        src={selectedVideo.videoUrl}
+                        controls
+                        className="w-full aspect-[9/16] max-h-[400px] object-contain bg-black"
+                        poster={selectedVideo.thumbnailUrl || undefined}
+                      />
+                      <div className="p-3 border-t border-[var(--border)] bg-[var(--bg-card)] flex justify-end">
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          onClick={() => {
+                            const a = document.createElement('a')
+                            a.href = selectedVideo.videoUrl!
+                            a.download = `${selectedVideo.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'video'}.mp4`
+                            document.body.appendChild(a)
+                            a.click()
+                            document.body.removeChild(a)
+                          }}
+                        >
+                          ↓ Download Video
+                        </Button>
+                      </div>
+                    </div>
+                  ) : selectedVideo.thumbnailUrl ? (
                     <div className="aspect-video rounded-[8px] overflow-hidden bg-[var(--bg-card)]">
                       <img
                         src={selectedVideo.thumbnailUrl}
@@ -247,7 +272,7 @@ export default function VideosPage() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                  )}
+                  ) : null}
                   <div>
                     <p className="text-[11px] text-[var(--text-dim)] uppercase tracking-wider">
                       Topic

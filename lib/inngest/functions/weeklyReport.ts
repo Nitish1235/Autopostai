@@ -102,7 +102,7 @@ export const weeklyReport = inngest.createFunction(
 
           // Send email
           await resend.emails.send({
-            from: 'AutoPost AI <noreply@autopost.ai>',
+            from: process.env.RESEND_FROM_EMAIL ?? 'noreply@autopostai.video',
             to: user.email,
             subject: `Your weekly report: ${totalViews.toLocaleString()} views this week`,
             html: buildWeeklyReportHTML({

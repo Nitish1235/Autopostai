@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { getDailyPostLimit, type PlanId } from '@/lib/utils/plans'
 import type { Platform } from '@/types'
 
 const ALL_PLATFORMS: Platform[] = ['tiktok', 'instagram', 'youtube', 'x']
@@ -39,13 +40,20 @@ export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState<PlatformStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [userPlan, setUserPlan] = useState<PlanId>('free')
 
   const fetchPlatforms = useCallback(async () => {
     try {
-      const res = await fetch('/api/platforms/status')
-      const data = await res.json()
-      if (data.success) {
-        setPlatforms(data.data)
+      const [platformRes, userRes] = await Promise.all([
+        fetch('/api/platforms/status'),
+        fetch('/api/user'),
+      ])
+      const platformData = await platformRes.json()
+      const userData = await userRes.json()
+
+      if (platformData.success) setPlatforms(platformData.data)
+      if (userData.success && userData.data?.plan) {
+        setUserPlan(userData.data.plan as PlanId)
       }
     } catch {
       toast({ message: 'Failed to load platforms', type: 'error' })
@@ -143,7 +151,7 @@ export default function PlatformsPage() {
         avatarUrl: null,
         followerCount: null,
         autoPost: false,
-        dailyLimit: 3,
+        dailyLimit: getDailyPostLimit(userPlan),
         postWindow: null,
         tokenExpiry: null,
         isExpired: false,
@@ -213,6 +221,7 @@ export default function PlatformsPage() {
               <PlatformCard
                 key={p.platform}
                 data={p}
+                plan={userPlan}
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
                 onSettingsUpdate={handleSettingsUpdate}

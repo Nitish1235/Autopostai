@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { getDailyPostLimit, canAutoPost } from '@/lib/utils/plans'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const POSTFORME_API_URL = 'https://api.postforme.dev/v1'
@@ -78,9 +79,19 @@ export async function GET(request: Request) {
             console.warn('[postforme/callback] Error fetching account details:', fetchErr)
         }
 
+        // Look up user's plan to set the correct dailyLimit
+        const userRecord = await prisma.user.findUnique({
+            where: { clerkId: userId },
+            select: { plan: true },
+        })
+        const plan = userRecord?.plan ?? 'free'
+        const planDailyLimit = getDailyPostLimit(plan)
+        const autoPostEnabled = canAutoPost(plan)
+
         // Upsert the platform connection.
         // We store the PostForMe social account ID (spc_xxx) in the accessToken field
         // since PostForMe manages the actual OAuth tokens internally.
+        // dailyLimit is set to the user's plan limit — not a hardcoded value.
         await prisma.platformConnection.upsert({
             where: {
                 userId_platform: {
@@ -96,6 +107,8 @@ export async function GET(request: Request) {
                 handle: username ?? `${platform}_user`,
                 displayName: username ?? `${platform} User`,
                 avatarUrl: avatarUrl ?? null,
+                dailyLimit: planDailyLimit,
+                autoPost: autoPostEnabled,
             },
             update: {
                 connected: true,
@@ -103,6 +116,10 @@ export async function GET(request: Request) {
                 handle: username ?? `${platform}_user`,
                 displayName: username ?? `${platform} User`,
                 avatarUrl: avatarUrl ?? null,
+                // Only update dailyLimit on reconnect if it exceeds plan max
+                // (plan downgrade protection — don't let stale limit exceed new plan)
+                dailyLimit: planDailyLimit,
+                autoPost: autoPostEnabled,
                 updatedAt: new Date(),
             },
         })

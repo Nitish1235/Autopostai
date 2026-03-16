@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { checkCredits, deductCredit, addCredits } from '@/lib/utils/credits'
 import { addVideoToQueue } from '@/lib/queue/videoQueue'
 import { getSegmentCount } from '@/lib/prompts/scriptPrompt'
+import { getDailyPostLimit, canAutoPost } from '@/lib/utils/plans'
 import type { ScheduleSlot, WeeklySchedule } from '@/types'
 
 // ── Day Name Map ─────────────────────────────────────
@@ -52,7 +53,15 @@ export const autopilotCron = inngest.createFunction(
           return
         }
 
-        // b. Check schedule: does current time match any slot?
+        // b-1. Enforce plan-level posting cap (overrides AutopilotConfig.postsPerDay)
+        const planMax = getDailyPostLimit(config.user.plan)
+        if (!canAutoPost(config.user.plan)) {
+          // Free plan — no autopilot posting allowed
+          return
+        }
+        const effectiveDailyMax = Math.min(config.postsPerDay, planMax)
+
+        // b-2. Check schedule: does current time match any slot?
         const now = new Date()
         const currentDay = DAY_NAMES[now.getUTCDay()]
         const currentHour = now.getUTCHours()
@@ -90,7 +99,7 @@ export const autopilotCron = inngest.createFunction(
           },
         })
 
-        if (todayPostCount >= config.postsPerDay) {
+        if (todayPostCount >= effectiveDailyMax) {
           return
         }
 

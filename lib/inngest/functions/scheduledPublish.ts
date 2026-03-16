@@ -73,22 +73,14 @@ export const scheduledPublish = inngest.createFunction(
             continue
           }
 
-          // Add to publish queue for each platform
-          for (const platform of validPlatforms) {
-            const connection = video.user.platformConnections.find(
-              (c) => c.platform === platform
-            )
+          // One combined publish job for ALL valid platforms
+          // publishWorker calls PostForMe once with multiple social account IDs
+          await enqueueJob('/api/jobs/publish', {
+            videoId: video.id,
+            userId: video.userId,
+            platforms: validPlatforms,
+          })
 
-            if (!connection?.accessToken) continue
-
-            await enqueueJob('/api/jobs/publish', {
-              videoId: video.id,
-              userId: video.userId,
-              platforms: [platform],
-            })
-          }
-
-          // publishWorker sets status → 'posted' on success
           count++
         } catch (error) {
           console.error(

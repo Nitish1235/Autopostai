@@ -118,16 +118,35 @@ function StepPreview({
               </p>
             </div>
           ) : videoUrl ? (
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              muted
-              loop
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full relative group">
+              <video
+                src={videoUrl}
+                controls
+                autoPlay
+                muted
+                loop
+                className="w-full h-full object-cover rounded-[inherit]"
+              />
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="bg-black/80 hover:bg-black text-white border-white/20 backdrop-blur"
+                  onClick={() => {
+                    const a = document.createElement('a')
+                    a.href = videoUrl
+                    a.download = 'generated_video.mp4'
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                  }}
+                >
+                  ↓ Download
+                </Button>
+              </div>
+            </div>
           ) : (
-            <div className="w-full h-full bg-[var(--bg-primary)] flex items-center justify-center">
+            <div className="w-full h-full bg-[var(--bg-primary)] flex items-center justify-center rounded-[inherit]">
               <p className="text-[12px] text-[var(--text-dim)]">
                 Preview will appear here
               </p>

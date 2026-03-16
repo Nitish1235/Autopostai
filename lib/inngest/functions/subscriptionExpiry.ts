@@ -39,6 +39,13 @@ export const subscriptionExpiry = inngest.createFunction(
                     },
                 })
 
+                // Also reset all platform dailyLimits → 0 and disable autoPost
+                // so the user can't keep auto-publishing after subscription expires
+                await prisma.platformConnection.updateMany({
+                    where: { userId: user.id },
+                    data: { dailyLimit: 0, autoPost: false },
+                })
+
                 // Log the transition
                 await prisma.creditTransaction.create({
                     data: {

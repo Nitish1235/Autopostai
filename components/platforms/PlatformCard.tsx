@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Settings2,
   Unplug,
+  Lock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Toggle } from '@/components/ui/toggle'
@@ -21,6 +22,7 @@ import { Slider } from '@/components/ui/slider'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils/cn'
 import { PLATFORM_COLORS } from '@/lib/utils/constants'
+import { getDailyPostLimit, type PlanId } from '@/lib/utils/plans'
 import type { Platform } from '@/types'
 
 type HealthStatus = 'healthy' | 'expiring' | 'expired' | 'disconnected' | 'throttled'
@@ -48,6 +50,7 @@ interface PlatformStatus {
 
 interface PlatformCardProps {
   data: PlatformStatus
+  plan: PlanId
   onConnect: (platform: Platform) => void
   onDisconnect: (platform: Platform) => void
   onSettingsUpdate: (platform: Platform, settings: { autoPost?: boolean; dailyLimit?: number; postWindow?: string }) => void
@@ -109,12 +112,15 @@ function formatTimeAgo(dateStr: string | null): string {
   return `${days}d ago`
 }
 
-function PlatformCard({ data, onConnect, onDisconnect, onSettingsUpdate }: PlatformCardProps) {
+function PlatformCard({ data, plan, onConnect, onDisconnect, onSettingsUpdate }: PlatformCardProps) {
   const { toast } = useToast()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [autoPost, setAutoPost] = useState(data.autoPost)
   const [dailyLimit, setDailyLimit] = useState(data.dailyLimit)
+
+  const planMax = getDailyPostLimit(plan)   // slider max from plan
+  const isFree = plan === 'free'
 
   const info = PLATFORM_INFO[data.platform]
   const health = HEALTH_CONFIG[data.healthStatus]
@@ -210,14 +216,21 @@ function PlatformCard({ data, onConnect, onDisconnect, onSettingsUpdate }: Platf
                 {/* Quick toggles */}
                 <div className="flex items-center justify-between py-2.5 border-t border-[var(--border)]">
                   <span className="text-[12px] text-[var(--text-secondary)]">Auto-post</span>
-                  <Toggle
-                    checked={autoPost}
-                    onChange={(v) => {
-                      setAutoPost(v)
-                      onSettingsUpdate(data.platform, { autoPost: v })
-                    }}
-                    size="sm"
-                  />
+                  {isFree ? (
+                    <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-dim)]">
+                      <Lock size={11} />
+                      <span>Upgrade to enable</span>
+                    </div>
+                  ) : (
+                    <Toggle
+                      checked={autoPost}
+                      onChange={(v) => {
+                        setAutoPost(v)
+                        onSettingsUpdate(data.platform, { autoPost: v })
+                      }}
+                      size="sm"
+                    />
+                  )}
                 </div>
 
                 {/* Warnings */}
@@ -339,16 +352,30 @@ function PlatformCard({ data, onConnect, onDisconnect, onSettingsUpdate }: Platf
             />
           </div>
 
-          {/* Daily limit slider */}
-          <Slider
-            label="Daily Post Limit"
-            value={dailyLimit}
-            onChange={setDailyLimit}
-            min={1}
-            max={10}
-            step={1}
-            showValue
-          />
+          {/* Daily limit slider — hidden for free plan */}
+          {isFree ? (
+            <div className="p-3 rounded-[10px] bg-[var(--surface-hover)] border border-[var(--border)]">
+              <div className="flex items-center gap-2">
+                <Lock size={13} className="text-[var(--text-dim)]" />
+                <div>
+                  <p className="text-[12px] font-medium text-[var(--text-secondary)]">Daily Post Limit</p>
+                  <p className="text-[11px] text-[var(--text-dim)] mt-0.5">
+                    Upgrade to Starter ($19/mo) to unlock 1 post/day
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Slider
+              label={`Daily Post Limit (max ${planMax} on your plan)`}
+              value={Math.min(dailyLimit, planMax)}
+              onChange={setDailyLimit}
+              min={1}
+              max={planMax}
+              step={1}
+              showValue
+            />
+          )}
 
           {/* Account info */}
           {data.displayName && (

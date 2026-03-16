@@ -73,24 +73,71 @@ function StepTopic({
   niche,
   onNicheChange,
 }: StepTopicProps) {
+  const [mode, setMode] = useState<'guided' | 'custom'>(
+    niche === 'custom' ? 'custom' : 'guided'
+  )
   const [showNicheMenu, setShowNicheMenu] = useState(false)
   const selectedNiche = NICHES.find((n) => n.id === niche)
   const trending = TRENDING_TOPICS[niche] || TRENDING_TOPICS.default
 
+  const handleModeSwitch = (newMode: 'guided' | 'custom') => {
+    setMode(newMode)
+    if (newMode === 'custom') {
+      onNicheChange('custom')
+    } else {
+      // Revert to a default if they switch back
+      if (niche === 'custom') onNicheChange('finance')
+    }
+  }
+
   return (
     <div className="max-w-[640px] mx-auto pt-8">
-      <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
-        What&apos;s your video about?
-      </h2>
-      <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-        Describe your topic and we&apos;ll generate the perfect script.
-      </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+            What&apos;s your video about?
+          </h2>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+            Describe your topic and we&apos;ll generate the perfect script.
+          </p>
+        </div>
 
-      <div className="mt-6">
+        {/* Mode Toggle */}
+        <div className="flex bg-[var(--bg-card)] border border-[var(--border)] rounded-[8px] p-1">
+          <button
+            onClick={() => handleModeSwitch('guided')}
+            className={cn(
+              'px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all cursor-pointer',
+              mode === 'guided'
+                ? 'bg-[var(--accent)] text-white shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            )}
+          >
+            Guided
+          </button>
+          <button
+            onClick={() => handleModeSwitch('custom')}
+            className={cn(
+              'px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all cursor-pointer',
+              mode === 'custom'
+                ? 'bg-[var(--accent)] text-white shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            )}
+          >
+            Custom
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-2">
         <Textarea
           value={topic}
           onChange={(e) => onTopicChange(e.target.value)}
-          placeholder={`e.g. "Why 90% of day traders lose money — break down the psychology of FOMO, revenge trading, and overconfidence. Include real statistics and end with 3 actionable tips."`}
+          placeholder={
+            mode === 'guided'
+              ? 'e.g. "Why 90% of day traders lose money — break down the psychology..."'
+              : 'Type any topic imaginable. We won\'t restrict the AI to a specific niche.'
+          }
           autoResize
           minHeight={120}
           className="text-[15px]"
@@ -122,38 +169,44 @@ function StepTopic({
           ))}
         </div>
 
-        {/* Niche dropdown */}
-        <Dropdown
-          align="right"
-          trigger={
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-[7px] bg-[var(--bg-card)] border border-[var(--border)] text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors cursor-pointer">
-              {selectedNiche ? `${selectedNiche.emoji} ${selectedNiche.label}` : 'Select niche'}
-            </button>
-          }
-          items={NICHES.map((n) => ({
-            label: `${n.emoji} ${n.label}`,
-            onClick: () => onNicheChange(n.id),
-          }))}
-        />
+        {/* Niche dropdown (Hidden in Custom mode) */}
+        {mode === 'guided' && (
+          <Dropdown
+            align="right"
+            trigger={
+              <button className="flex items-center gap-2 px-3 py-1.5 rounded-[7px] bg-[var(--bg-card)] border border-[var(--border)] text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors cursor-pointer">
+                {selectedNiche
+                  ? `${selectedNiche.emoji} ${selectedNiche.label}`
+                  : 'Select niche'}
+              </button>
+            }
+            items={NICHES.filter((n) => n.id !== 'custom').map((n) => ({
+              label: `${n.emoji} ${n.label}`,
+              onClick: () => onNicheChange(n.id),
+            }))}
+          />
+        )}
       </div>
 
-      {/* Trending topics */}
-      <div className="mt-6">
-        <p className="text-[12px] text-[var(--text-dim)] mb-2">
-          Trending topics →
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {trending.map((t) => (
-            <button
-              key={t}
-              onClick={() => onTopicChange(t)}
-              className="px-3 py-1.5 rounded-full bg-[var(--bg-card)] border border-[var(--border)] text-[11px] text-[var(--text-secondary)] hover:border-[var(--accent-border)] hover:text-[var(--accent)] transition-colors cursor-pointer"
-            >
-              {t}
-            </button>
-          ))}
+      {/* Trending topics (Hidden in Custom mode) */}
+      {mode === 'guided' && (
+        <div className="mt-6">
+          <p className="text-[12px] text-[var(--text-dim)] mb-2">
+            Trending topics →
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {trending.map((t) => (
+              <button
+                key={t}
+                onClick={() => onTopicChange(t)}
+                className="px-3 py-1.5 rounded-full bg-[var(--bg-card)] border border-[var(--border)] text-[11px] text-[var(--text-secondary)] hover:border-[var(--accent-border)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

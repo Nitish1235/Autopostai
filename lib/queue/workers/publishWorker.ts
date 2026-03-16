@@ -154,6 +154,10 @@ export async function handlePublishJob(data: PublishJob) {
         for (const result of postForMeResults) {
           if (result.success) {
             successfulPlatforms.push(result.platform)
+            // Store PostForMe postId for analytics lookup later
+            if (result.postId) {
+              currentStatuses[`${result.platform}_postId`] = result.postId
+            }
           } else {
             failedPlatforms.push(result.platform)
           }
@@ -218,19 +222,16 @@ export async function handlePublishJob(data: PublishJob) {
       })
     }
 
-    // 16. Send Inngest event
-    try {
-      await inngest.send({
-        name: 'video/posted',
-        data: {
-          videoId,
-          userId,
-          platforms: successfulPlatforms,
-          allDone: allTargetsDone,
-        },
-      })
-    } catch {
-      // Non-critical
+    // 16. Trigger analytics sync via Inngest after successful publish
+    if (successfulPlatforms.length > 0) {
+      try {
+        await inngest.send({
+          name: 'analytics/sync',
+          data: { videoId, userId },
+        })
+      } catch {
+        // Non-critical — analytics will sync on the next daily cron anyway
+      }
     }
 
     console.log(

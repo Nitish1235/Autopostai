@@ -178,7 +178,7 @@ model PlatformConnection {
   // Settings
   connected     Boolean   @default(false)
   autoPost      Boolean   @default(true)
-  dailyLimit    Int       @default(3)
+  dailyLimit    Int       @default(1)  // Set by plan: starter=1, pro=2, creator_max=4 (see lib/utils/plans.ts)
   postWindow    String    @default("18:00-21:00")
 
   // Health

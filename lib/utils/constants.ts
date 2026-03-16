@@ -283,6 +283,7 @@ export const NICHES: {
   label: string
   emoji: string
 }[] = [
+    { id: 'custom', label: 'Custom / Any Topic', emoji: '✨' },
     { id: 'finance', label: 'Finance & Money', emoji: '\uD83D\uDCB0' },
     { id: 'health', label: 'Health & Fitness', emoji: '\uD83D\uDCAA' },
     { id: 'tech', label: 'Technology & AI', emoji: '\uD83E\uDD16' },

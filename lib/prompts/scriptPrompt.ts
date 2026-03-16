@@ -60,10 +60,11 @@ export function buildScriptUserPrompt(
   format: string,
   segmentCount: number
 ): string {
+  const nicheLine = niche === 'custom' ? '' : `Niche: ${niche}\n`
+
   return `Create a viral short-form video script about: ${topic}
 
-Niche: ${niche}
-Format: ${format} video
+${nicheLine}Format: ${format} video
 Required segments: exactly ${segmentCount}
 Estimated duration per segment: ${getDurationPerSegment(format)} seconds
 
