@@ -31,6 +31,7 @@ steps:
         set +e
         /tmp/prisma-cli/node_modules/.bin/prisma db push \
           --schema=./prisma/schema.prisma \
+          --accept-data-loss \
           --skip-generate 2>&1 | tee /tmp/prisma_out.txt
         PRISMA_EXIT=$$?
         set -e
