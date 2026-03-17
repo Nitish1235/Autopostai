@@ -119,6 +119,7 @@ model Video {
   renderJobId   String?
   errorMessage  String?
   creditsUsed   Int       @default(1)
+  regenerationsUsed Int   @default(0)
   processingMs  Int?
 
   // Analytics (synced from platforms)

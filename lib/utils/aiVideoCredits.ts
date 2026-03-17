@@ -121,6 +121,44 @@ export async function resetMonthlyAiVideoCredits(
     ])
 }
 
+// ── Add AI Video Credits (Refunds/Bonus) ──────────────
+
+export async function addAiVideoCredits(
+    userId: string,
+    amount: number,
+    type: 'purchase' | 'bonus' | 'refund' | 'reset',
+    description: string
+): Promise<void> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { aiVideoCredits: true },
+    })
+
+    if (!user) {
+        throw new Error(`User not found: ${userId}`)
+    }
+
+    const newBalance = user.aiVideoCredits + amount
+
+    await prisma.$transaction([
+        prisma.user.update({
+            where: { id: userId },
+            data: {
+                aiVideoCredits: { increment: amount },
+            },
+        }),
+        prisma.creditTransaction.create({
+            data: {
+                userId,
+                type,
+                credits: 0, // Doesn't affect regular credits
+                description: `[AI Video] ${description}`,
+                balanceAfter: newBalance,
+            },
+        }),
+    ])
+}
+
 // ── Get AI Video Limit ────────────────────────────────
 
 export function getAiVideoLimit(plan: string): number {

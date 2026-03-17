@@ -1,6 +1,7 @@
 import { renderVideo } from '@/lib/ffmpeg/buildCommand'
 import { prisma } from '@/lib/db/prisma'
 import { addCredits } from '@/lib/utils/credits'
+import { addAiVideoCredits } from '@/lib/utils/aiVideoCredits'
 import { enqueueJob } from '@/lib/queue/qstash'
 import { inngest } from '@/lib/inngest/client'
 import type { RenderJob, PublishJob } from '@/lib/queue/videoQueue'
@@ -33,6 +34,7 @@ export async function handleRenderJob(data: RenderJob) {
         musicVolume: true,
         platforms: true,
         scheduledAt: true,
+        generationMode: true,
       },
     })
 
@@ -40,6 +42,7 @@ export async function handleRenderJob(data: RenderJob) {
       throw new Error(`Video not found: ${videoId}`)
     }
 
+    // ... (rest of the steps remain the same until catch block)
     // 1.5 Idempotency Check: If video is already done, skip
     if (video.status === 'ready' || video.status === 'posted' || video.videoUrl) {
        console.log(`[renderWorker] Video ${videoId} is already rendered (status: ${video.status}). Skipping duplicate job.`)
@@ -160,13 +163,20 @@ export async function handleRenderJob(data: RenderJob) {
       },
     })
 
-    // Refund credit for autopilot-generated videos
-    if (failedVideo.topicQueueId) {
+    // Refund credit for any failed video (manual or autopilot)
+    if (failedVideo.generationMode === 'ai_video') {
+      await addAiVideoCredits(
+        failedVideo.userId,
+        1,
+        'refund',
+        'Video render failed — AI credit returned'
+      ).catch((e) => console.error('[renderWorker] AI credit refund failed:', e))
+    } else {
       await addCredits(
         failedVideo.userId,
         1,
         'refund',
-        'Video render failed — autopilot credit returned'
+        'Video render failed — credit returned'
       ).catch((e) => console.error('[renderWorker] Credit refund failed:', e))
     }
 

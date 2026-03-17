@@ -37,8 +37,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-
-
     // 2. Validate input
     const body = await request.json()
     const parsed = schema.safeParse(body)
@@ -55,10 +53,10 @@ export async function POST(request: NextRequest) {
 
     const { videoId, segmentIndex, imagePrompt, imageStyle } = parsed.data
 
-    // 3. Validate ownership
+    // 3. Validate ownership & check regeneration limits
     const video = await prisma.video.findUnique({
       where: { id: videoId },
-      select: { userId: true, imageUrls: true },
+      select: { userId: true, imageUrls: true, regenerationsUsed: true },
     })
 
     if (!video) {
@@ -71,6 +69,14 @@ export async function POST(request: NextRequest) {
     if (video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+
+    // REGENERATION LIMIT: Max 10 per video
+    if (video.regenerationsUsed >= 10) {
+      return NextResponse.json(
+        { success: false, error: 'Maximum regeneration limit reached for this video (10).' },
         { status: 403 }
       )
     }
@@ -119,7 +125,10 @@ export async function POST(request: NextRequest) {
 
     await prisma.video.update({
       where: { id: videoId },
-      data: { imageUrls: newUrls },
+      data: {
+        imageUrls: newUrls,
+        regenerationsUsed: { increment: 1 }
+      },
     })
 
     return NextResponse.json({

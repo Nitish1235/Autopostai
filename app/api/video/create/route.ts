@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { deductCredit, addCredits } from '@/lib/utils/credits'
-import { checkAiVideoCredits, deductAiVideoCredit } from '@/lib/utils/aiVideoCredits'
+import { checkAiVideoCredits, deductAiVideoCredit, addAiVideoCredits } from '@/lib/utils/aiVideoCredits'
 import { addVideoToQueue, addAiVideoToQueue } from '@/lib/queue/videoQueue'
 import { getSegmentCount } from '@/lib/prompts/scriptPrompt'
 import { inngest } from '@/lib/inngest/client'
@@ -170,7 +170,9 @@ export async function POST(request: NextRequest) {
       })
     } catch (err) {
       // Refund credit since video creation failed
-      if (!isAiVideo) {
+      if (isAiVideo) {
+        await addAiVideoCredits(userId, 1, 'refund', 'Video creation failed — AI credit returned')
+      } else {
         await addCredits(userId, 1, 'refund', 'Video creation failed — credit returned')
       }
       throw err
@@ -213,7 +215,11 @@ export async function POST(request: NextRequest) {
       // Clean up: delete video + renderJob, refund credit
       await prisma.renderJob.deleteMany({ where: { videoId: video.id } })
       await prisma.video.delete({ where: { id: video.id } })
-      await addCredits(userId, 1, 'refund', 'Video queue failed — credit returned')
+      if (isAiVideo) {
+        await addAiVideoCredits(userId, 1, 'refund', 'Video queue failed — AI credit returned')
+      } else {
+        await addCredits(userId, 1, 'refund', 'Video queue failed — credit returned')
+      }
       throw err
     }
 

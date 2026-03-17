@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { addCredits } from '@/lib/utils/credits'
+import { addAiVideoCredits } from '@/lib/utils/aiVideoCredits'
 import { deleteFile, generateVideoKey, generateThumbnailKey } from '@/lib/gcs/storage'
 import type { ScriptSegment, SubtitleConfig } from '@/types'
 
@@ -202,6 +203,7 @@ export async function DELETE(
         script: true,
         masterAudioUrl: true,
         topicQueueId: true,
+        generationMode: true,
       },
     })
 
@@ -253,15 +255,30 @@ export async function DELETE(
       }).catch(() => { })
     }
 
-    // FIX #5: Refund credit if video never rendered successfully
-    const REFUNDABLE = ['pending', 'failed', 'generating_script', 'generating_images', 'generating_voice']
-    if (REFUNDABLE.includes(video.status)) {
-      await addCredits(
-        userId,
-        1,
-        'refund',
-        'Video deleted before completion — credit returned'
-      ).catch((e) => console.error('[video/DELETE] Refund failed:', e))
+    // HARDENED REFUND LOGIC:
+    // Only refund if:
+    // 1. Status is 'failed' (system error)
+    // 2. OR status is 'pending' AND no major assets were generated yet (prevent "browsing" exploit)
+    const imagesCount = (video.imageUrls as string[] ?? []).length
+    const hasGeneratedAssets = imagesCount > 0 || !!video.masterAudioUrl
+    const isAiVideo = video.generationMode === 'ai_video'
+
+    if (video.status === 'failed' || (video.status === 'pending' && !hasGeneratedAssets)) {
+      if (isAiVideo) {
+        await addAiVideoCredits(
+          userId,
+          1,
+          'refund',
+          'Video deleted/failed — AI credit returned'
+        ).catch((e) => console.error('[video/DELETE] AI Refund failed:', e))
+      } else {
+        await addCredits(
+          userId,
+          1,
+          'refund',
+          'Video deleted/failed — credit returned'
+        ).catch((e) => console.error('[video/DELETE] Refund failed:', e))
+      }
     }
 
     // Delete video record (cascades to VideoAnalytics)

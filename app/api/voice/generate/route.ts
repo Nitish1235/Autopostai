@@ -41,16 +41,24 @@ export async function POST(request: Request) {
 
     const { videoId, segmentIndex, narration, voiceId, voiceSpeed } = parsed.data
 
-    // Verify ownership
+    // Verify ownership & check regeneration limits
     const video = await prisma.video.findUnique({
       where: { id: videoId },
-      select: { userId: true, script: true },
+      select: { userId: true, script: true, regenerationsUsed: true },
     })
 
     if (!video || video.userId !== userId) {
       return NextResponse.json(
         { success: false, error: 'Video not found' },
         { status: 404 }
+      )
+    }
+
+    // REGENERATION LIMIT: Max 10 per video
+    if (video.regenerationsUsed >= 10) {
+      return NextResponse.json(
+        { success: false, error: 'Maximum regeneration limit reached for this video (10).' },
+        { status: 403 }
       )
     }
 
@@ -89,6 +97,7 @@ export async function POST(request: Request) {
       where: { id: videoId },
       data: {
         script: updatedScript as any,
+        regenerationsUsed: { increment: 1 }
       },
     })
 
