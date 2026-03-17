@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // IMPORTANT: When scaling, ensure this is a connection pooler URL ending with ?pgbouncer=true
-  directUrl = env("DIRECT_URL")   // Direct connection strictly for migrations
+  // directUrl = env("DIRECT_URL")   // Direct connection strictly for migrations
 }
 
 // ── USER ──────────────────────────────────────────────
@@ -216,6 +216,8 @@ model AutopilotConfig {
   voiceId         String    @default("ryan")
   musicMood       String    @default("motivational")
   approvalMode    String    @default("review")
+  generationMode  String    @default("image_stack") // image_stack | ai_video
+  consecutiveFailures Int @default(0)
 
   // Weekly schedule stored as JSON
   // { monday: [{time, platform, enabled}], ... }

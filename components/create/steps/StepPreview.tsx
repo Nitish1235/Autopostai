@@ -88,9 +88,19 @@ function StepPreview({
         <div className="h-[600px] w-auto">
           <PhoneMockup platform="tiktok" className="h-full w-auto">
           {isGenerating ? (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[var(--bg-primary)]">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[var(--bg-primary)] p-6">
+              {/* Added time estimate */}
+              <div className="mb-6 text-center">
+                <p className="text-[14px] font-semibold text-[var(--text-primary)] mb-1">
+                  Generating Your Video
+                </p>
+                <p className="text-[12px] text-[var(--text-dim)]">
+                  It will take 2-4 minutes
+                </p>
+              </div>
+
               {/* Progress ring */}
-              <div className="relative w-20 h-20">
+              <div className="relative w-24 h-24 mb-6">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
                   <circle
                     cx="40" cy="40" r="35"
@@ -109,13 +119,23 @@ function StepPreview({
                     transition={{ duration: 0.5 }}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[14px] font-bold text-[var(--text-primary)]">
-                  {Math.round(generationProgress)}%
-                </span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[18px] font-bold text-[var(--accent)]">
+                    {Math.round(generationProgress)}%
+                  </span>
+                </div>
               </div>
-              <p className="text-[11px] text-[var(--text-secondary)] mt-3 text-center px-4">
-                {generationStage}
-              </p>
+
+              {/* Added processing text and stage */}
+              <div className="text-center space-y-2">
+                <p className="text-[13px] font-medium text-[var(--text-primary)]">
+                  Video {Math.round(generationProgress)}% processing
+                </p>
+                <p className="text-[11px] text-[var(--text-dim)] px-4 flex items-center justify-center gap-2">
+                  <Loader2 size={10} className="animate-spin" />
+                  {generationStage}
+                </p>
+              </div>
             </div>
           ) : videoUrl ? (
             <div className="w-full h-full relative group">
