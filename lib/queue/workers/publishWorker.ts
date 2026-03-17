@@ -49,9 +49,9 @@ export async function handlePublishJob(data: PublishJob) {
     })
 
     // 3. Validate
-    if (video.status !== 'ready' && video.status !== 'scheduled' && video.status !== 'posted') {
+    if (!['ready', 'scheduled', 'posted', 'failed'].includes(video.status)) {
       throw new Error(
-        `Video status is ${video.status}, expected 'ready', 'scheduled', or 'posted'`
+        `Video status is ${video.status}, expected 'ready', 'scheduled', 'posted', or 'failed'`
       )
     }
 
@@ -190,10 +190,19 @@ export async function handlePublishJob(data: PublishJob) {
       mergedPublished.includes(p)
     )
 
+    const hasFailures = failedPlatforms.length > 0;
+    const finalStatus = allTargetsDone 
+      ? 'posted' 
+      : hasFailures 
+        ? 'failed' 
+        : video.status === 'scheduled' 
+          ? 'ready' 
+          : video.status;
+
     await prisma.video.update({
       where: { id: videoId },
       data: {
-        status: allTargetsDone ? 'posted' : video.status === 'scheduled' ? 'ready' : video.status,
+        status: finalStatus,
         postedAt: allTargetsDone ? new Date() : video.status === 'posted' ? undefined : null,
         publishedPlatforms: mergedPublished,
         platformStatuses: updatedStatuses,
@@ -271,6 +280,7 @@ export async function handlePublishJob(data: PublishJob) {
         await prisma.video.update({
           where: { id: videoId },
           data: {
+            status: 'failed',
             platformStatuses: statuses,
             errorMessage: `Publishing failed: ${message}`,
           },

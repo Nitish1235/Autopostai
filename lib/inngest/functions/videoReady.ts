@@ -57,14 +57,19 @@ export const onVideoReady = inngest.createFunction(
     // Step 2 — Send notification
     await step.run('send-notification', async () => {
       if (user.notifyVideoReady && user.email) {
-        await sendVideoReadyEmail({
-          email: user.email,
-          name: user.name ?? 'Creator',
-          videoTitle: video.title,
-          videoId: video.id,
-          thumbnailUrl: video.thumbnailUrl ?? undefined,
-          approvalMode: approvalMode as 'review' | 'autopilot',
-        })
+        try {
+          await sendVideoReadyEmail({
+            email: user.email,
+            name: user.name ?? 'Creator',
+            videoTitle: video.title,
+            videoId: video.id,
+            thumbnailUrl: video.thumbnailUrl ?? undefined,
+            approvalMode: approvalMode as 'review' | 'autopilot',
+          })
+        } catch (error) {
+          console.error('[send-notification] Failed to send video ready email:', error)
+          // Swallow the error so the workflow can continue to Step 3 (Autopilot)
+        }
       }
     })
 

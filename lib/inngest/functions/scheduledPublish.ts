@@ -19,7 +19,6 @@ export const scheduledPublish = inngest.createFunction(
           status: 'scheduled',
           scheduledAt: {
             lte: now,
-            gte: windowStart,
           },
         },
         select: {
