@@ -28,9 +28,11 @@ export const authOptions: NextAuthOptions = {
         // Handle New User Logic (replaces Clerk webhook)
         if (isNewUser) {
           try {
-            // Create default AutopilotConfig
-            await prisma.autopilotConfig.create({
-              data: {
+            // Create default AutopilotConfig (Idempotent)
+            await prisma.autopilotConfig.upsert({
+              where: { userId: userId },
+              update: {}, // Don't overwrite if it exists
+              create: {
                 userId: userId,
                 schedule: JSON.stringify({
                   monday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
