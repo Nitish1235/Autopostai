@@ -57,10 +57,10 @@ interface PlatformCardProps {
 }
 
 const PLATFORM_INFO: Record<Platform, { label: string; icon: string; connectPath: string }> = {
-  tiktok: { label: 'TikTok', icon: '🎵', connectPath: '/api/auth/tiktok' },
-  instagram: { label: 'Instagram', icon: '📸', connectPath: '/api/auth/instagram' },
-  youtube: { label: 'YouTube', icon: '▶️', connectPath: '/api/auth/youtube' },
-  x: { label: 'X', icon: '𝕏', connectPath: '/api/auth/x' },
+  tiktok: { label: 'TikTok', icon: '🎵', connectPath: '/api/platforms/connect/tiktok' },
+  instagram: { label: 'Instagram', icon: '📸', connectPath: '/api/platforms/connect/instagram' },
+  youtube: { label: 'YouTube', icon: '▶️', connectPath: '/api/platforms/connect/youtube' },
+  x: { label: 'X', icon: '𝕏', connectPath: '/api/platforms/connect/x' },
 }
 
 const HEALTH_CONFIG: Record<

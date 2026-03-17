@@ -74,7 +74,7 @@ export default function PlatformsPage() {
 
   const handleConnect = async (platform: Platform) => {
     try {
-      const res = await fetch(`/api/auth/${platform}`)
+      const res = await fetch(`/api/platforms/connect/${platform}`)
       const data = await res.json()
       
       if (data.success && data.data?.authUrl) {
