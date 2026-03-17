@@ -375,7 +375,7 @@ function PublishTab({
   const [publishing, setPublishing] = useState<string | null>(null)
   const statuses = (video.platformStatuses ?? {}) as Record<string, PlatformStatus>
   const published = new Set(video.publishedPlatforms ?? [])
-  const canPublish = video.status === 'ready' || video.status === 'posted'
+  const canPublish = (video.status === 'ready' || video.status === 'posted' || video.status === 'failed') && !!video.videoUrl
 
   const handlePublish = async (platform: Platform) => {
     setPublishing(platform)

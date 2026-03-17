@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Stepper } from '@/components/ui/stepper'
 import { StepMode } from '@/components/create/steps/StepMode'
@@ -99,6 +99,70 @@ function CreateWizard() {
   const [generationProgress, setGenerationProgress] = useState(0)
   const [generationStage, setGenerationStage] = useState('')
   const [publishing, setPublishing] = useState(false)
+
+  // ── Resumability Logic ──────────────────────────────
+  
+  // 1. Save videoId to localStorage
+  useEffect(() => {
+    if (videoId) {
+      localStorage.setItem('autopost_draft_video_id', videoId)
+    }
+  }, [videoId])
+
+  // 2. Clear draft
+  const handleClearDraft = useCallback(() => {
+    localStorage.removeItem('autopost_draft_video_id')
+    setVideoId(null)
+    setVideoUrl(null)
+    setThumbnailUrl(null)
+    setTopic('')
+    setScript([])
+    setCurrentStep(0)
+  }, [])
+
+  // 3. Re-hydrate on mount
+  useEffect(() => {
+    const savedId = localStorage.getItem('autopost_draft_video_id')
+    if (savedId && !videoId) {
+      const rehydrate = async () => {
+        try {
+          const res = await fetch(`/api/video/${savedId}`)
+          const data = await res.json()
+          if (data.success && data.data) {
+            const v = data.data
+            // Don't re-hydrate if already posted
+            if (v.status === 'posted') {
+              localStorage.removeItem('autopost_draft_video_id')
+              return
+            }
+
+            setVideoId(v.id)
+            setTopic(v.topic || '')
+            setNiche(v.niche || 'finance')
+            setFormat(v.format || '60s')
+            setScript(v.script || [])
+            setVoiceId(v.voiceId || 'ryan')
+            setImageStyle(v.imageStyle || 'cinematic')
+            setMusicMood(v.musicMood || 'upbeat')
+            setSubtitleConfig(v.subtitleConfig || DEFAULT_SUBTITLE_CONFIG)
+            setSelectedPlatforms(v.platforms || ['tiktok'])
+            setVideoUrl(v.videoUrl)
+            setThumbnailUrl(v.thumbnailUrl)
+            setGenerationMode(v.generationMode || 'image_stack')
+            
+            // If it has a video URL or is rendering, skip to preview
+            if (v.videoUrl || ['rendering', 'ready', 'failed'].includes(v.status)) {
+              const isAi = (v.generationMode || 'image_stack') === 'ai_video'
+              setCurrentStep(isAi ? AI_VIDEO_STEPS.length - 1 : IMAGE_STACK_STEPS.length - 1)
+            }
+          }
+        } catch (err) {
+          console.error('Re-hydration failed:', err)
+        }
+      }
+      rehydrate()
+    }
+  }, [videoId]) // Only run if no videoId is currently active
 
   const isAiVideo = generationMode === 'ai_video'
   const steps = isAiVideo ? AI_VIDEO_STEPS : IMAGE_STACK_STEPS
@@ -438,27 +502,41 @@ function CreateWizard() {
       </div>
 
       {/* Navigation bar */}
-      {currentStep < previewStepIndex && (
-        <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--border)]">
+      <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--border)]">
+        <div className="flex gap-3">
           <Button
             variant="secondary"
             onClick={handleBack}
-            disabled={currentStep === 0}
+            disabled={currentStep === 0 || isGenerating}
           >
             ← Back
           </Button>
-          <span className="text-[12px] text-[var(--text-dim)]">
-            Step {currentStep + 1} of {steps.length}
-          </span>
-          <Button
-            onClick={handleNext}
-            disabled={!canGoNext()}
-            loading={isGenerating}
-          >
-            {getCTALabel()}
-          </Button>
+          {(videoId || videoUrl) && currentStep === previewStepIndex && (
+            <Button
+              variant="secondary"
+              onClick={handleClearDraft}
+              disabled={isGenerating || publishing}
+            >
+              Start New Video
+            </Button>
+          )}
         </div>
-      )}
+        
+        {currentStep < previewStepIndex && (
+          <>
+            <span className="text-[12px] text-[var(--text-dim)]">
+              Step {currentStep + 1} of {steps.length}
+            </span>
+            <Button
+              onClick={handleNext}
+              disabled={!canGoNext()}
+              loading={isGenerating}
+            >
+              {getCTALabel()}
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
