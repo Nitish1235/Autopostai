@@ -137,7 +137,7 @@ steps:
       - '--min-instances'
       - '1'
       - '--max-instances'
-      - '3'
+      - '2'
       - '--timeout'
       - '600'
       - '--concurrency'
