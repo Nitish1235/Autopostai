@@ -1,6 +1,7 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
 import { checkCredits, deductCredit, addCredits } from '@/lib/utils/credits'
+import { checkAiVideoCredits, deductAiVideoCredit, addAiVideoCredits } from '@/lib/utils/aiVideoCredits'
 import { addVideoToQueue } from '@/lib/queue/videoQueue'
 import { getSegmentCount } from '@/lib/prompts/scriptPrompt'
 import { getDailyPostLimit, canAutoPost } from '@/lib/utils/plans'
@@ -29,7 +30,11 @@ export const autopilotCron = inngest.createFunction(
     // Step 1 — Find all active autopilots
     const autopilots = await step.run('find-active-autopilots', async () => {
       return prisma.autopilotConfig.findMany({
-        where: { enabled: true },
+        where: { 
+            enabled: true,
+            // Optimization: Skip configs that have failed too many times
+            consecutiveFailures: { lt: 3 }
+        },
         include: {
           user: {
             select: {
@@ -47,18 +52,21 @@ export const autopilotCron = inngest.createFunction(
       processed++
 
       await step.run(`process-user-${config.userId}`, async () => {
-        // a. Check credits
-        const creditStatus = await checkCredits(config.userId)
-        if (!creditStatus.hasCredits) {
-          return
+        const generationMode = (config as any).generationMode || 'image_stack'
+        const isAiVideo = generationMode === 'ai_video'
+
+        // a. Check credits based on mode
+        if (isAiVideo) {
+            const aiStatus = await checkAiVideoCredits(config.userId)
+            if (!aiStatus.hasCredits) return
+        } else {
+            const creditStatus = await checkCredits(config.userId)
+            if (!creditStatus.hasCredits) return
         }
 
-        // b-1. Enforce plan-level posting cap (overrides AutopilotConfig.postsPerDay)
+        // b-1. Enforce plan-level posting cap
         const planMax = getDailyPostLimit(config.user.plan)
-        if (!canAutoPost(config.user.plan)) {
-          // Free plan — no autopilot posting allowed
-          return
-        }
+        if (!canAutoPost(config.user.plan)) return
         const effectiveDailyMax = Math.min(config.postsPerDay, planMax)
 
         // b-2. Check schedule: does current time match any slot?
@@ -83,9 +91,7 @@ export const autopilotCron = inngest.createFunction(
           return slotHour === currentHour
         })
 
-        if (matchingSlots.length === 0) {
-          return
-        }
+        if (matchingSlots.length === 0) return
 
         // c. Check daily posting limit
         const todayStart = new Date()
@@ -99,12 +105,9 @@ export const autopilotCron = inngest.createFunction(
           },
         })
 
-        if (todayPostCount >= effectiveDailyMax) {
-          return
-        }
+        if (todayPostCount >= effectiveDailyMax) return
 
-        // d. BUG FIX #1: Duplicate-run prevention
-        //    Check if a video was already created in the current hour for this user
+        // d. Duplicate-run prevention
         const hourStart = new Date()
         hourStart.setUTCMinutes(0, 0, 0)
         const alreadyFiredThisHour = await prisma.video.count({
@@ -114,9 +117,7 @@ export const autopilotCron = inngest.createFunction(
             createdAt: { gte: hourStart },
           },
         })
-        if (alreadyFiredThisHour > 0) {
-          return // Already processed a slot in this hour — skip
-        }
+        if (alreadyFiredThisHour > 0) return
 
         // e. Get next pending topic from queue
         const topic = await prisma.topicQueue.findFirst({
@@ -143,24 +144,13 @@ export const autopilotCron = inngest.createFunction(
         // f. Determine scheduling
         let scheduledAt: Date | null = null
         if (config.approvalMode === 'review') {
-          // 24 hour review window
           scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
         } else {
-          // FIX #14: Autopilot mode — publish ASAP when video is ready.
-          // Don't use the slot time (it may already be past within the hour).
-          // videoReady.ts handles immediate publishing for autopilot mode.
           scheduledAt = now
         }
 
-        // g. BUG FIX #3: Deduct credit FIRST (atomic guard: throws if credits = 0)
-        //    We don't have a videoId yet, so pass a placeholder and update later
-        await deductCredit(
-          config.userId,
-          'autopilot-pending',
-          'Autopilot video generation'
-        )
-
-        // h. Create video (credit already deducted — refund if this fails)
+        // g. Create video FIRST (credit already deducted — refund if this fails)
+        // Note: Credits are deducted AFTER creation but BEFORE queue to ensure we have a videoId
         let video
         try {
           video = await prisma.video.create({
@@ -179,15 +169,33 @@ export const autopilotCron = inngest.createFunction(
               scheduledAt,
               status: 'pending',
               creditsUsed: 1,
+              generationMode: generationMode as any,
               title: topic.topic.slice(0, 60),
               imageUrls: [],
               topicQueueId: topic.id,
             },
           })
         } catch (err) {
-          // Refund the credit since video creation failed
-          await addCredits(config.userId, 1, 'refund', 'Autopilot video creation failed')
-          throw err
+            console.error('[autopilot] Failed to create video record:', err)
+            // Tracking failure
+            await prisma.autopilotConfig.update({
+                where: { userId: config.userId },
+                data: { consecutiveFailures: { increment: 1 } }
+            })
+            return
+        }
+
+        // h. Deduct credit
+        try {
+            if (isAiVideo) {
+                await deductAiVideoCredit(config.userId, video.id, 'Autopilot (AI Video)')
+            } else {
+                await deductCredit(config.userId, video.id, 'Autopilot')
+            }
+        } catch (err) {
+            // Clean up: delete video
+            await prisma.video.delete({ where: { id: video.id } })
+            return
         }
 
         // i. Queue for processing
@@ -204,63 +212,64 @@ export const autopilotCron = inngest.createFunction(
             config.voiceId,
             1.0
           )
+          
+          // SUCCESS! Reset failure counter
+          await prisma.autopilotConfig.update({
+            where: { userId: config.userId },
+            data: { 
+                consecutiveFailures: 0,
+                lastRunAt: new Date(),
+                nextRunAt: getNextScheduledSlot(schedule)
+            }
+          })
+
+          // Mark topic "generating"
+          await prisma.topicQueue.update({
+            where: { id: topic.id },
+            data: {
+              status: 'generating',
+              videoId: video.id,
+              scheduledFor: scheduledAt,
+            },
+          })
+
+          videosScheduled++
+
         } catch (err) {
+          console.error('[autopilot] Queue failed:', err)
           // Clean up: delete video and refund credit
           await prisma.video.delete({ where: { id: video.id } })
-          await addCredits(config.userId, 1, 'refund', 'Autopilot queue failed — credit returned')
+          if (isAiVideo) {
+              await addAiVideoCredits(config.userId, 1, 'refund', 'Autopilot queue failed')
+          } else {
+              await addCredits(config.userId, 1, 'refund', 'Autopilot queue failed')
+          }
+          // Increment failures
+          await prisma.autopilotConfig.update({
+            where: { userId: config.userId },
+            data: { consecutiveFailures: { increment: 1 } }
+          })
           throw err
         }
-
-        // j. BUG FIX #5: Mark topic "generating" ONLY after video + queue succeed
-        await prisma.topicQueue.update({
-          where: { id: topic.id },
-          data: {
-            status: 'generating',
-            videoId: video.id,
-            scheduledFor: scheduledAt,
-          },
-        })
-
-        // k. Update autopilot last run + FIX #13: Set nextRunAt to actual next slot
-        await prisma.autopilotConfig.update({
-          where: { id: config.id },
-          data: {
-            lastRunAt: new Date(),
-            nextRunAt: getNextScheduledSlot(schedule),
-          },
-        })
-
-        videosScheduled++
       })
     }
 
     // Step 3 — Replenish topics for users with < 3 pending
     await step.run('replenish-topics', async () => {
-      // Find users with low topic counts
       const lowTopicUsers = await prisma.autopilotConfig.findMany({
-        where: { enabled: true },
-        select: {
-          userId: true,
-          niche: true,
-        },
+        where: { enabled: true, consecutiveFailures: { lt: 3 } },
+        select: { userId: true, niche: true },
       })
 
       for (const user of lowTopicUsers) {
         const pendingCount = await prisma.topicQueue.count({
-          where: {
-            userId: user.userId,
-            status: 'pending',
-          },
+          where: { userId: user.userId, status: 'pending' },
         })
 
         if (pendingCount < 3) {
           await inngest.send({
             name: 'topics/generate',
-            data: {
-              userId: user.userId,
-              niche: user.niche,
-              count: 10,
-            },
+            data: { userId: user.userId, niche: user.niche, count: 10 },
           })
         }
       }
@@ -280,13 +289,11 @@ function getNextScheduledSlot(schedule: WeeklySchedule): Date {
   const now = new Date()
   const currentDayIndex = now.getUTCDay()
 
-  // Scan the next 7 days (starting from today)
   for (let offset = 0; offset < 7; offset++) {
     const dayIndex = (currentDayIndex + offset) % 7
     const dayName = DAY_ORDER[dayIndex]
     const slots: ScheduleSlot[] = schedule[dayName] ?? []
 
-    // Sort slots by time so we find the earliest match
     const enabledSlots = slots
       .filter((s) => s.enabled)
       .sort((a, b) => a.time.localeCompare(b.time))
@@ -297,13 +304,10 @@ function getNextScheduledSlot(schedule: WeeklySchedule): Date {
       candidate.setUTCDate(candidate.getUTCDate() + offset)
       candidate.setUTCHours(hours, minutes, 0, 0)
 
-      if (candidate > now) {
-        return candidate
-      }
+      if (candidate > now) return candidate
     }
   }
 
-  // Fallback: tomorrow at 18:00 UTC
   const fallback = new Date(now)
   fallback.setUTCDate(fallback.getUTCDate() + 1)
   fallback.setUTCHours(18, 0, 0, 0)

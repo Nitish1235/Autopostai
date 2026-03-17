@@ -169,7 +169,7 @@ export default function AutopilotPage() {
           imageStyle,
           voiceId,
           approvalMode,
-          schedule: JSON.stringify(schedule),
+          schedule: schedule,
           aiOptimizeTime: aiOptimize,
         }),
       })

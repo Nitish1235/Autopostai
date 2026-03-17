@@ -29,6 +29,7 @@ const UpdateSchema = z.object({
     .optional(),
   subtitleConfig: z.record(z.unknown()).optional(),
   aiOptimizeTime: z.boolean().optional(),
+  generationMode: z.enum(['image_stack', 'ai_video']).optional(),
 })
 
 // ── GET — Get Autopilot Config ───────────────────────
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
       config = await prisma.autopilotConfig.create({
         data: {
           userId: userId,
-          schedule: JSON.stringify({
+          schedule: {
             monday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
             tuesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
             wednesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
@@ -61,7 +62,7 @@ export async function GET(req: Request) {
             friday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
             saturday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
             sunday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
-          }),
+          },
         },
       })
     }
@@ -101,8 +102,6 @@ export async function PUT(request: Request) {
 
     const data = parsed.data
 
-    // Autopilot available on all plans
-
     // Build update payload
     const updateData: Record<string, unknown> = {}
     if (data.enabled !== undefined) updateData.enabled = data.enabled
@@ -116,13 +115,14 @@ export async function PUT(request: Request) {
     if (data.schedule !== undefined) updateData.schedule = data.schedule
     if (data.subtitleConfig !== undefined) updateData.subtitleConfig = data.subtitleConfig
     if (data.aiOptimizeTime !== undefined) updateData.aiOptimizeTime = data.aiOptimizeTime
+    if (data.generationMode !== undefined) updateData.generationMode = data.generationMode
 
     const config = await prisma.autopilotConfig.upsert({
       where: { userId: userId },
       create: {
         userId: userId,
         ...updateData,
-      },
+      } as any, // Typed as any to bypass local prisma client sync issues
       update: updateData,
     })
 
@@ -140,7 +140,7 @@ export async function PUT(request: Request) {
             data: {
               userId: userId,
               niche,
-              count: 7,
+              count: 10,
             },
           })
         } catch {
@@ -169,7 +169,7 @@ export async function PUT(request: Request) {
 
 // ── Helper: Get Next Scheduled Time ──────────────────
 
-function getNextScheduledTime(schedule: Record<string, unknown[]>): Date {
+function getNextScheduledTime(schedule: Record<string, any[]>): Date {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const now = new Date()
   const currentDay = now.getUTCDay()
@@ -178,7 +178,7 @@ function getNextScheduledTime(schedule: Record<string, unknown[]>): Date {
   for (let offset = 0; offset < 7; offset++) {
     const dayIndex = (currentDay + offset) % 7
     const dayName = days[dayIndex]
-    const slots = schedule[dayName] as Array<{ time: string; enabled: boolean }> | undefined
+    const slots = (schedule as any)[dayName] as Array<{ time: string; enabled: boolean }> | undefined
 
     if (!slots) continue
 

@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)))
     const status = searchParams.get('status') ?? undefined
 
-    const where: Record<string, unknown> = {
+    const where: Record<string, any> = {
       userId: userId,
     }
     if (status) where.status = status
@@ -91,17 +91,28 @@ export async function POST(request: Request) {
 
     // Handle regenerate all topics
     if (body.regenerate === true) {
-      // Topic regeneration available on all plans
+      // TRIGGER GENERATION - FIX #1: Add 15-min cooldown to prevent cost leaks
+      const config = await prisma.autopilotConfig.findUnique({
+        where: { userId: userId },
+        select: { niche: true, topicsGeneratedAt: true },
+      })
+
+      if (config?.topicsGeneratedAt) {
+        const lastGen = new Date(config.topicsGeneratedAt).getTime()
+        const diff = Date.now() - lastGen
+        const COOLDOWN = 15 * 60 * 1000 // 15 mins
+        if (diff < COOLDOWN) {
+          const waitMins = Math.ceil((COOLDOWN - diff) / 60000)
+          return NextResponse.json(
+            { success: false, error: `Please wait ${waitMins}m before regenerating topics again.` },
+            { status: 429 }
+          )
+        }
+      }
 
       // Delete all pending topics
       await prisma.topicQueue.deleteMany({
         where: { userId: userId, status: 'pending' },
-      })
-
-      // Get niche from config
-      const config = await prisma.autopilotConfig.findUnique({
-        where: { userId: userId },
-        select: { niche: true },
       })
 
       // Trigger generation
@@ -110,7 +121,7 @@ export async function POST(request: Request) {
         data: {
           userId: userId,
           niche: config?.niche ?? 'finance',
-          count: 7,
+          count: 10,
         },
       })
 
@@ -120,7 +131,17 @@ export async function POST(request: Request) {
       })
     }
 
-    // Handle add single topic
+    // Handle add single topic - FIX #4: Max 50 pending topics limit
+    const pendingCount = await prisma.topicQueue.count({
+      where: { userId: userId, status: 'pending' }
+    })
+    if (pendingCount >= 50) {
+      return NextResponse.json(
+        { success: false, error: 'Maximum topic queue size (50) reached. Delete some topics first.' },
+        { status: 400 }
+      )
+    }
+
     const parsed = AddTopicSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -142,18 +163,18 @@ export async function POST(request: Request) {
     // Get user's default niche if not provided
     let niche = parsed.data.niche
     if (!niche) {
-      const user = await prisma.user.findUnique({
+      const u = await prisma.user.findUnique({
         where: { id: userId },
         select: { defaultNiche: true },
       })
-      niche = user?.defaultNiche ?? 'general'
+      niche = (u as any)?.defaultNiche ?? 'general'
     }
 
     const topic = await prisma.topicQueue.create({
       data: {
         userId: userId,
         topic: parsed.data.topic,
-        niche,
+        niche: niche as string,
         order: nextOrder,
         status: 'pending',
       },
