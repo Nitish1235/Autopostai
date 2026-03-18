@@ -512,7 +512,11 @@ function CreateWizard() {
           <Button
             variant="secondary"
             onClick={handleBack}
-            disabled={currentStep === 0 || isGenerating}
+            disabled={
+              currentStep === 0 ||
+              isGenerating ||
+              (currentStep === previewStepIndex && !!(videoUrl || videoId))
+            }
           >
             ← Back
           </Button>

@@ -452,3 +452,19 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// ── ADMIN VOICE PREVIEWS ───────────────────────────────
+// Stores pre-generated TTS audio clips for each voice character.
+// Served to users on the voice selection screen so they can preview
+// each voice without hitting the UnrealSpeech API in real-time.
+model AdminVoicePreview {
+  id        String   @id @default(cuid())
+  voiceId   String   @unique       // matches VOICES[].id from constants.ts
+  audioUrl  String                 // GCS URL of the generated MP3
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([voiceId])
+  @@index([active])
+}
