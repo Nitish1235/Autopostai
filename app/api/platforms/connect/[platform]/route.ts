@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getYouTubeAuthUrl } from '@/lib/api/youtube'
 
 const POSTFORME_API_URL = 'https://api.postforme.dev/v1'
 const POSTFORME_API_KEY = process.env.POSTFORME_API_KEY ?? ''
@@ -20,6 +21,15 @@ export async function GET(
             )
         }
 
+        const { platform } = await params
+
+        // ── YouTube: use Google OAuth directly (not PostForMe) ──
+        if (platform === 'youtube') {
+            const authUrl = getYouTubeAuthUrl(userId)
+            return NextResponse.json({ success: true, data: { authUrl } })
+        }
+
+        // ── All other platforms: continue using PostForMe ────────
         if (!POSTFORME_API_KEY) {
             console.error('Missing POSTFORME_API_KEY')
             return NextResponse.json(
@@ -27,19 +37,6 @@ export async function GET(
                 { status: 500 }
             )
         }
-
-        const { platform } = await params
-
-        // Use the APP_URL for the callback instead of hardcoding localhost
-        const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
-        const body = JSON.stringify({ 
-            platform,
-            // NOTE: redirect_url_override only works with your own OAuth credentials.
-            // When using PostForMe's system credentials (default), you must set the
-            // redirect URL in your PostForMe dashboard at https://app.postforme.dev
-            // to point to: ${APP_URL}/api/platforms/postforme/callback
-        })
 
         console.log(`[auth/${platform}] Requesting auth URL from PostForMe...`)
 
@@ -49,7 +46,7 @@ export async function GET(
                 'Authorization': `Bearer ${POSTFORME_API_KEY}`,
                 'Content-Type': 'application/json',
             },
-            body,
+            body: JSON.stringify({ platform }),
         })
 
         if (!response.ok) {
@@ -62,10 +59,7 @@ export async function GET(
             )
         }
 
-
         const data = await response.json()
-
-        // PostForMe returns the direct platform OAuth URL
         const authUrl = data.url || data.auth_url || data.authUrl
         if (!authUrl) {
             console.error('[auth] PostForMe did not return an auth URL:', data)
@@ -75,10 +69,7 @@ export async function GET(
             )
         }
 
-        return NextResponse.json({
-            success: true,
-            data: { authUrl },
-        })
+        return NextResponse.json({ success: true, data: { authUrl } })
     } catch (error) {
         console.error(`[auth] Error initializing OAuth flow:`, error)
         return NextResponse.json(

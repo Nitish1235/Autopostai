@@ -15,7 +15,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/schedule': 'Schedule',
   '/autopilot': 'Autopilot',
   '/platforms': 'Platforms',
-  '/analytics': 'Analytics',
   '/settings': 'Settings',
 }
 

@@ -49,7 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'GROWTH',
     items: [
       { label: 'Platforms', href: '/platforms', icon: <Share2 size={16} /> },
-      { label: 'Analytics', href: '/analytics', icon: <BarChart2 size={16} /> },
+      // Analytics hidden — backend logic preserved, UI coming soon
     ],
   },
   {

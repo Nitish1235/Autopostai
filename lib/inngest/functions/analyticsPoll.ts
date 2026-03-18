@@ -3,6 +3,11 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
 import { getPostAnalytics } from '@/lib/api/postforme'
+import {
+  refreshYouTubeToken,
+  getYouTubeVideoStats,
+} from '@/lib/api/youtube'
+import { decryptToken, encryptToken } from '@/lib/utils/encryption'
 
 // ── Analytics Poll Function ──────────────────────────
 
@@ -96,18 +101,56 @@ export const analyticsPoll = inngest.createFunction(
             }
 
             try {
-              const postForMeAnalytics = await getPostAnalytics({
-                platform,
-                postId,                      // ← Real PostForMe post ID
-                accessToken: connection.accessToken,
-              })
+              let postAnalytics
 
-              platformBreakdown[platform] = {
-                views: postForMeAnalytics.views,
-                likes: postForMeAnalytics.likes,
-                shares: postForMeAnalytics.shares,
-                comments: postForMeAnalytics.comments,
-                watchRate: postForMeAnalytics.watchRate,
+              if (platform === 'youtube') {
+                // ── YouTube: use native YouTube Data API ──
+                // The stored youtube_postId is the YouTube video ID (e.g. "dQw4w9WgXcQ")
+                if (!postId) continue
+
+                if (!connection?.refreshToken) continue
+                const rawRefreshToken = decryptToken(connection.refreshToken) || connection.refreshToken
+
+                let accessToken = decryptToken(connection.accessToken) || connection.accessToken
+                try {
+                  const refreshed = await refreshYouTubeToken(rawRefreshToken)
+                  accessToken = refreshed.accessToken
+                  // Save refreshed token back to DB
+                  const ytConn = video.user.platformConnections.find((c) => c.platform === 'youtube')
+                  if (ytConn) {
+                    await prisma.platformConnection.updateMany({
+                      where: { userId: video.userId, platform: 'youtube' },
+                      data: {
+                        accessToken: encryptToken(refreshed.accessToken) ?? refreshed.accessToken,
+                        tokenExpiry: refreshed.expiresAt,
+                      },
+                    })
+                  }
+                } catch {
+                  // Use existing token if refresh fails
+                }
+
+                postAnalytics = await getYouTubeVideoStats({
+                  accessToken,
+                  ytVideoId: postId,
+                })
+              } else {
+                // ── Other platforms: PostForMe analytics ──
+                postAnalytics = await getPostAnalytics({
+                  platform,
+                  postId,
+                  accessToken: connection.accessToken,
+                })
+              }
+
+              if (postAnalytics) {
+                platformBreakdown[platform] = {
+                  views: postAnalytics.views,
+                  likes: postAnalytics.likes,
+                  shares: postAnalytics.shares,
+                  comments: postAnalytics.comments,
+                  watchRate: postAnalytics.watchRate,
+                }
               }
             } catch (platError) {
               console.error(

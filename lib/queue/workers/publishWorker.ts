@@ -1,8 +1,9 @@
 import { postToMultiplePlatforms, type PostPublishResult } from '@/lib/api/postforme'
+import { uploadVideoToYouTube, refreshYouTubeToken } from '@/lib/api/youtube'
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
-import { decryptToken } from '@/lib/utils/encryption'
+import { decryptToken, encryptToken } from '@/lib/utils/encryption'
 import type { PublishJob } from '@/lib/queue/videoQueue'
 
 // ── Publish Handler ──────────────────────────────────
@@ -117,12 +118,58 @@ export async function handlePublishJob(data: PublishJob) {
 
     await Promise.all(captionPromises)
 
-    // 8. Publish ALL platforms (tiktok, instagram, youtube, x) via PostForMe
+    // 8. Publish platforms — YouTube via native Google API, others via PostForMe
     const successfulPlatforms: string[] = []
     const failedPlatforms: string[] = []
 
-    // accessToken field stores the PostForMe social_account_id
-    const connectedPlatforms = platformsToPublish
+    // ── 8a. YouTube native upload ─────────────────────────
+    if (platformsToPublish.includes('youtube')) {
+      const ytConn = connections.find((c) => c.platform === 'youtube')
+      if (!ytConn?.accessToken || !ytConn.refreshToken) {
+        failedPlatforms.push('youtube')
+      } else {
+        try {
+          let accessToken = decryptToken(ytConn.accessToken) || ytConn.accessToken
+          const rawRefreshToken = decryptToken(ytConn.refreshToken) || ytConn.refreshToken
+
+          // Refresh if expired (tokenExpiry stored in DB — but refresh proactively)
+          try {
+            const refreshed = await refreshYouTubeToken(rawRefreshToken)
+            accessToken = refreshed.accessToken
+            // Save refreshed token back to DB
+            await prisma.platformConnection.update({
+              where: { id: ytConn.id },
+              data: {
+                accessToken: encryptToken(refreshed.accessToken) ?? refreshed.accessToken,
+                tokenExpiry: refreshed.expiresAt,
+              },
+            })
+          } catch {
+            // Refresh failed — try with existing token
+          }
+
+          const ytCaption = captionMap['youtube']
+          const ytVideoId = await uploadVideoToYouTube({
+            accessToken,
+            videoUrl: video.videoUrl!,
+            title: video.title,
+            description: `${ytCaption?.caption ?? video.title}\n\n${ytCaption?.hashtags?.map((t) => `#${t}`).join(' ') ?? ''}`.trim(),
+            tags: ytCaption?.hashtags ?? [],
+          })
+
+          successfulPlatforms.push('youtube')
+          currentStatuses['youtube_postId'] = ytVideoId  // YouTube video ID for analytics
+          console.log(`[publishWorker] YouTube upload success: https://youtube.com/watch?v=${ytVideoId}`)
+        } catch (ytErr) {
+          console.error('[publishWorker] YouTube native upload failed:', ytErr)
+          failedPlatforms.push('youtube')
+        }
+      }
+    }
+
+    // ── 8b. All other platforms via PostForMe ─────────────
+    const postFormePlatforms = platformsToPublish.filter((p) => p !== 'youtube')
+    const connectedPlatforms = postFormePlatforms
       .map((platform) => {
         const conn = connections.find((c) => c.platform === platform)
         if (!conn?.accessToken) {
@@ -131,7 +178,7 @@ export async function handlePublishJob(data: PublishJob) {
         }
         return {
           platform: platform as string,
-          socialAccountId: decryptToken(conn.accessToken) || conn.accessToken, // This is the decrypted PostForMe social account ID
+          socialAccountId: decryptToken(conn.accessToken) || conn.accessToken,
         }
       })
       .filter(
@@ -142,7 +189,7 @@ export async function handlePublishJob(data: PublishJob) {
     if (connectedPlatforms.length > 0) {
       const defaultPlatform = connectedPlatforms[0].platform
       const defaultCaption =
-        captionMap[defaultPlatform] ?? captionMap[platformsToPublish[0]]
+        captionMap[defaultPlatform] ?? captionMap[postFormePlatforms[0]]
 
       try {
         const postForMeResults = await postToMultiplePlatforms({
@@ -156,7 +203,6 @@ export async function handlePublishJob(data: PublishJob) {
         for (const result of postForMeResults) {
           if (result.success) {
             successfulPlatforms.push(result.platform)
-            // Store PostForMe postId for analytics lookup later
             if (result.postId) {
               currentStatuses[`${result.platform}_postId`] = result.postId
             }
@@ -164,7 +210,6 @@ export async function handlePublishJob(data: PublishJob) {
             failedPlatforms.push(result.platform)
           }
         }
-
       } catch {
         for (const cp of connectedPlatforms) {
           failedPlatforms.push(cp.platform)
