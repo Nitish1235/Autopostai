@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Zap, Clock, Minus, Plus } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Zap, Clock, Minus, Plus, Video, Image as ImageIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Toggle } from '@/components/ui/toggle'
 import { Dropdown } from '@/components/ui/dropdown'
@@ -9,8 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { Tabs } from '@/components/ui/tabs'
 import { ScheduleGrid } from '@/components/autopilot/ScheduleGrid'
 import { TopicQueue } from '@/components/autopilot/TopicQueue'
+import { PlannerTab } from '@/components/autopilot/PlannerTab'
 import { cn } from '@/lib/utils/cn'
 import { NICHES, IMAGE_STYLES, VOICES } from '@/lib/utils/constants'
 import type {
@@ -60,9 +63,13 @@ function timeUntil(dateStr: string | null | undefined): string {
 
 export default function AutopilotPage() {
   const { toast } = useToast()
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as any)?.isAdmin ?? false
+
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<'planner' | 'rules'>('planner')
 
   // Config state
   const [enabled, setEnabled] = useState(false)
@@ -71,6 +78,7 @@ export default function AutopilotPage() {
   const [postsPerDay, setPostsPerDay] = useState(2)
   const [imageStyle, setImageStyle] = useState<ImageStyle>('cinematic')
   const [voiceId, setVoiceId] = useState('ryan')
+  const [generationMode, setGenerationMode] = useState<'image_stack' | 'ai_video'>('image_stack')
   const [approvalMode, setApprovalMode] = useState<'review' | 'autopilot'>(
     'review'
   )
@@ -97,6 +105,7 @@ export default function AutopilotPage() {
           setPostsPerDay(cfg.postsPerDay ?? 2)
           setImageStyle((cfg.imageStyle as ImageStyle) || 'cinematic')
           setVoiceId(cfg.voiceId || 'ryan')
+          setGenerationMode(cfg.generationMode || 'image_stack')
           setApprovalMode(cfg.approvalMode || 'review')
           if (cfg.schedule) {
             try {
@@ -168,6 +177,7 @@ export default function AutopilotPage() {
           postsPerDay,
           imageStyle,
           voiceId,
+          generationMode,
           approvalMode,
           schedule: schedule,
           aiOptimizeTime: aiOptimize,
@@ -184,7 +194,7 @@ export default function AutopilotPage() {
     } finally {
       setSaving(false)
     }
-  }, [niche, format, postsPerDay, imageStyle, voiceId, approvalMode, schedule, aiOptimize, toast])
+  }, [niche, format, postsPerDay, imageStyle, voiceId, generationMode, approvalMode, schedule, aiOptimize, toast])
 
   const handleGenerateNow = useCallback(
     async (topicId: string) => {
@@ -203,6 +213,7 @@ export default function AutopilotPage() {
   )
 
   const selectedNiche = NICHES.find((n) => n.id === niche)
+  const maxPostsPerDay = isAdmin ? 24 : 6
 
   if (loading) {
     return (
@@ -227,7 +238,6 @@ export default function AutopilotPage() {
             : 'bg-[var(--bg-card)] border-[var(--border)]'
         )}
       >
-        {/* Background decoration */}
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[var(--accent)] opacity-[0.06] blur-3xl" />
 
         <div className="relative flex items-center justify-between">
@@ -282,13 +292,69 @@ export default function AutopilotPage() {
         </div>
       </div>
 
-      {/* CONFIG GRID */}
+      {/* TABS */}
+      <div className="mb-6">
+        <Tabs
+          items={[
+            { id: 'planner', label: 'Planner & Upcoming' },
+            { id: 'rules', label: 'Generation Rules' },
+          ]}
+          active={activeTab}
+          onChange={(id) => setActiveTab(id as 'rules' | 'planner')}
+          variant="pill"
+        />
+      </div>
+
+      {activeTab === 'planner' ? (
+        <PlannerTab />
+      ) : (
+        <>
+          {/* CONFIG GRID */}
       <div className="grid grid-cols-2 gap-4">
         {/* Content Settings */}
         <Card padding="md">
           <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-4">
             Content Settings
           </h3>
+
+          {/* Generation Mode Selector */}
+          <div className="mb-4">
+            <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">
+              Generation Mode
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setGenerationMode('image_stack')}
+                className={cn(
+                  'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
+                  generationMode === 'image_stack'
+                    ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                )}
+              >
+                <ImageIcon size={16} />
+                <div className="text-left">
+                  <p className="text-[12px] font-bold">Standard</p>
+                  <p className="text-[10px] opacity-70 italic">Image stacks</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setGenerationMode('ai_video')}
+                className={cn(
+                  'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
+                  generationMode === 'ai_video'
+                    ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                )}
+              >
+                <Video size={16} />
+                <div className="text-left">
+                  <p className="text-[12px] font-bold">AI Video</p>
+                  <p className="text-[10px] opacity-70 italic">Sora-2 clips</p>
+                </div>
+              </button>
+            </div>
+          </div>
 
           {/* Niche */}
           <div className="mb-4">
@@ -350,18 +416,19 @@ export default function AutopilotPage() {
                 {postsPerDay}
               </span>
               <button
-                onClick={() => setPostsPerDay(Math.min(6, postsPerDay + 1))}
+                onClick={() => setPostsPerDay(Math.min(maxPostsPerDay, postsPerDay + 1))}
                 className="w-8 h-8 rounded-[7px] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors cursor-pointer"
               >
                 <Plus size={14} />
               </button>
             </div>
+            {isAdmin && <p className="text-[10px] text-[var(--accent)] mt-1 font-medium">✨ Admin Unlimited: Up to 24 posts/day</p>}
           </div>
 
           {/* Image style compact grid */}
           <div className="mb-4">
             <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">
-              Image Style
+              {generationMode === 'image_stack' ? 'Image Style' : 'AI Video Style'}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               {IMAGE_STYLES.slice(0, 4).map((s) => (
@@ -482,9 +549,11 @@ export default function AutopilotPage() {
       {/* Save button */}
       <div className="mt-5 flex justify-end">
         <Button onClick={handleSave} loading={saving}>
-          Save Settings
+          Save Settings {isAdmin && '(Admin Mode)'}
         </Button>
       </div>
+        </>
+      )}
     </div>
   )
 }

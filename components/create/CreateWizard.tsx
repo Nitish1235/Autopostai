@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Stepper } from '@/components/ui/stepper'
 import { StepMode } from '@/components/create/steps/StepMode'
@@ -91,7 +92,11 @@ function CreateWizard() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
     'tiktok',
   ])
-  const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
+  const searchParams = useSearchParams()
+  const initialScheduledAt = searchParams.get('scheduledAt')
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(
+    initialScheduledAt ? new Date(initialScheduledAt) : null
+  )
   const [videoId, setVideoId] = useState<string | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)

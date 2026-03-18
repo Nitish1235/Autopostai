@@ -46,6 +46,9 @@ model User {
   notifyWeeklyReport    Boolean @default(true)
   notifyTrendAlert      Boolean @default(false)
   notifyCreditLow       Boolean @default(true)
+  
+  // State flags for notification throttling
+  lowCreditNotified     Boolean @default(false)
 
   // Dodo Payments
   dodoCustomerId    String?   @unique

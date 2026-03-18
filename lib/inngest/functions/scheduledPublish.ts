@@ -72,6 +72,12 @@ export const scheduledPublish = inngest.createFunction(
             continue
           }
 
+          // FIX: Lock the video to prevent duplicate scheduling in race conditions
+          await prisma.video.update({
+            where: { id: video.id },
+            data: { status: 'ready' }
+          })
+
           // One combined publish job for ALL valid platforms
           // publishWorker calls PostForMe once with multiple social account IDs
           await enqueueJob('/api/jobs/publish', {
@@ -86,6 +92,16 @@ export const scheduledPublish = inngest.createFunction(
             `[scheduledPublish] Failed to queue video ${video.id}:`,
             error
           )
+          
+          // Revert lock on failure so the next CRON can retry
+          try {
+            await prisma.video.update({
+              where: { id: video.id },
+              data: { status: 'scheduled' }
+            })
+          } catch (e) {
+             console.error(`[scheduledPublish] Failed to revert ${video.id} lock:`, e)
+          }
         }
       }
 

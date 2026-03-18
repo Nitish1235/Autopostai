@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
+import { encryptToken } from '@/lib/utils/encryption'
 
 const SAFE_SELECT = {
   id: true,
@@ -80,16 +81,16 @@ export async function POST(req: Request) {
         platform,
         handle,
         displayName: displayName ?? handle,
-        accessToken,
-        refreshToken: refreshToken ?? null,
+        accessToken: encryptToken(accessToken),
+        refreshToken: encryptToken(refreshToken) ?? null,
         tokenExpiry,
         connected: true,
       },
       update: {
         handle,
         displayName: displayName ?? handle,
-        accessToken,
-        refreshToken: refreshToken ?? null,
+        accessToken: encryptToken(accessToken),
+        refreshToken: encryptToken(refreshToken) ?? null,
         tokenExpiry,
         connected: true,
       },
@@ -101,11 +102,9 @@ export async function POST(req: Request) {
       select: SAFE_SELECT,
     })
 
-    return NextResponse.json({
-      success: true,
-      data: safeConnection,
-    })
+    return NextResponse.json({ success: true, data: safeConnection })
   } catch (error) {
+    console.error('[platforms/connect] Error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -2,16 +2,21 @@ import { prisma } from '@/lib/db/prisma'
 import { PLANS } from '@/lib/utils/constants'
 
 // ── Admin users get unlimited credits ─────────────────
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'nitishjain135@gmail.com')
+export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'nitishjain135@gmail.com')
   .split(',')
   .map((e) => e.trim().toLowerCase())
+
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false
+  return ADMIN_EMAILS.includes(email.toLowerCase())
+}
 
 export async function isAdminUser(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true },
   })
-  return !!user && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  return isAdminEmail(user?.email)
 }
 
 // ── Check Credits ─────────────────────────────────────
@@ -121,6 +126,7 @@ export async function addCredits(
       where: { id: userId },
       data: {
         credits: { increment: amount },
+        lowCreditNotified: false,
       },
     }),
     prisma.creditTransaction.create({
@@ -161,6 +167,7 @@ export async function resetMonthlyCredits(
         credits: planLimit,
         creditsUsed: 0,
         creditsReset: resetDate,
+        lowCreditNotified: false,
       },
     }),
     prisma.creditTransaction.create({
@@ -203,6 +210,7 @@ export async function upgradeCredits(
         credits: totalCredits,
         creditsUsed: 0,
         creditsReset: resetDate,
+        lowCreditNotified: false,
       },
     }),
     prisma.creditTransaction.create({

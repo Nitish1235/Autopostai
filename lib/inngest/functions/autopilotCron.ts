@@ -1,6 +1,6 @@
 import { inngest } from '@/lib/inngest/client'
 import { prisma } from '@/lib/db/prisma'
-import { checkCredits, deductCredit, addCredits } from '@/lib/utils/credits'
+import { checkCredits, deductCredit, addCredits, isAdminEmail } from '@/lib/utils/credits'
 import { checkAiVideoCredits, deductAiVideoCredit, addAiVideoCredits } from '@/lib/utils/aiVideoCredits'
 import { addVideoToQueue } from '@/lib/queue/videoQueue'
 import { getSegmentCount } from '@/lib/prompts/scriptPrompt'
@@ -33,7 +33,8 @@ export const autopilotCron = inngest.createFunction(
         where: { 
             enabled: true,
             // Optimization: Skip configs that have failed too many times
-            consecutiveFailures: { lt: 3 }
+            // Using any to bypass local prisma client sync issues
+            ...( { consecutiveFailures: { lt: 3 } } as any )
         },
         include: {
           user: {
@@ -41,6 +42,7 @@ export const autopilotCron = inngest.createFunction(
               id: true,
               credits: true,
               plan: true,
+              email: true,
             },
           },
         },
@@ -48,25 +50,27 @@ export const autopilotCron = inngest.createFunction(
     })
 
     // Step 2 — Process each user
-    for (const config of autopilots) {
+    for (const rawConfig of autopilots) {
       processed++
+      const config = rawConfig as any // Type assertion for Inngest serialization + new fields
 
       await step.run(`process-user-${config.userId}`, async () => {
-        const generationMode = (config as any).generationMode || 'image_stack'
+        const generationMode = config.generationMode || 'image_stack'
         const isAiVideo = generationMode === 'ai_video'
+        const isAdmin = isAdminEmail(config.user?.email)
 
-        // a. Check credits based on mode
+        // a. Check credits based on mode (Bypass for admin)
         if (isAiVideo) {
             const aiStatus = await checkAiVideoCredits(config.userId)
-            if (!aiStatus.hasCredits) return
+            if (!aiStatus.hasCredits && !isAdmin) return
         } else {
             const creditStatus = await checkCredits(config.userId)
-            if (!creditStatus.hasCredits) return
+            if (!creditStatus.hasCredits && !isAdmin) return
         }
 
         // b-1. Enforce plan-level posting cap
-        const planMax = getDailyPostLimit(config.user.plan)
-        if (!canAutoPost(config.user.plan)) return
+        const planMax = isAdmin ? 100 : getDailyPostLimit(config.user?.plan)
+        if (!canAutoPost(config.user?.plan) && !isAdmin) return
         const effectiveDailyMax = Math.min(config.postsPerDay, planMax)
 
         // b-2. Check schedule: does current time match any slot?
@@ -149,8 +153,7 @@ export const autopilotCron = inngest.createFunction(
           scheduledAt = now
         }
 
-        // g. Create video FIRST (credit already deducted — refund if this fails)
-        // Note: Credits are deducted AFTER creation but BEFORE queue to ensure we have a videoId
+        // g. Create video FIRST
         let video
         try {
           video = await prisma.video.create({
@@ -164,7 +167,7 @@ export const autopilotCron = inngest.createFunction(
               voiceSpeed: 1.0,
               musicMood: config.musicMood,
               musicVolume: 0.15,
-              subtitleConfig: config.subtitleConfig ?? {},
+              subtitleConfig: (config.subtitleConfig as any) ?? {},
               platforms: matchingSlots.map((s) => s.platform),
               scheduledAt,
               status: 'pending',
@@ -180,12 +183,12 @@ export const autopilotCron = inngest.createFunction(
             // Tracking failure
             await prisma.autopilotConfig.update({
                 where: { userId: config.userId },
-                data: { consecutiveFailures: { increment: 1 } }
+                data: { consecutiveFailures: { increment: 1 } } as any
             })
             return
         }
 
-        // h. Deduct credit
+        // h. Deduct credit (skip if admin)
         try {
             if (isAiVideo) {
                 await deductAiVideoCredit(config.userId, video.id, 'Autopilot (AI Video)')
@@ -220,7 +223,7 @@ export const autopilotCron = inngest.createFunction(
                 consecutiveFailures: 0,
                 lastRunAt: new Date(),
                 nextRunAt: getNextScheduledSlot(schedule)
-            }
+            } as any
           })
 
           // Mark topic "generating"
@@ -247,7 +250,7 @@ export const autopilotCron = inngest.createFunction(
           // Increment failures
           await prisma.autopilotConfig.update({
             where: { userId: config.userId },
-            data: { consecutiveFailures: { increment: 1 } }
+            data: { consecutiveFailures: { increment: 1 } } as any
           })
           throw err
         }
@@ -257,7 +260,10 @@ export const autopilotCron = inngest.createFunction(
     // Step 3 — Replenish topics for users with < 3 pending
     await step.run('replenish-topics', async () => {
       const lowTopicUsers = await prisma.autopilotConfig.findMany({
-        where: { enabled: true, consecutiveFailures: { lt: 3 } },
+        where: { 
+            enabled: true,
+            ...( { consecutiveFailures: { lt: 3 } } as any )
+        },
         select: { userId: true, niche: true },
       })
 

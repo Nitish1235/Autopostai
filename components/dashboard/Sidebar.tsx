@@ -42,7 +42,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'CONTENT',
     items: [
       { label: 'My Videos', href: '/videos', icon: <Film size={16} /> },
-      { label: 'Schedule', href: '/schedule', icon: <Calendar size={16} /> },
       { label: 'Autopilot', href: '/autopilot', icon: <Zap size={16} /> },
     ],
   },

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
+import { isAdminEmail } from '@/lib/utils/credits'
 
 // ── GET — Fetch current user ──────────────────────────
 
@@ -76,7 +77,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      data: user,
+      data: {
+        ...user,
+        isAdmin: isAdminEmail(user.email),
+      },
     })
   } catch (error) {
     return NextResponse.json(
@@ -140,7 +144,10 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({
       success: true,
-      data: updatedUser,
+      data: {
+        ...updatedUser,
+        isAdmin: isAdminEmail(updatedUser.email),
+      },
     })
   } catch (error) {
     return NextResponse.json(

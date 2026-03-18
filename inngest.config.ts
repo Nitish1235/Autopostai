@@ -9,6 +9,7 @@ import { onVideoCreated } from '@/lib/inngest/functions/videoCreated'
 import { onVideoReady } from '@/lib/inngest/functions/videoReady'
 import { subscriptionExpiry } from '@/lib/inngest/functions/subscriptionExpiry'
 import { onVideoPosted } from '@/lib/inngest/functions/onVideoPosted'
+import { sweepOrphans } from '@/lib/inngest/functions/sweepOrphans'
 
 // ── ALL functions registered on the web container ──────────────────────────
 // 
@@ -29,6 +30,7 @@ const functions = [
   onVideoReady,
   onVideoPosted,      // analytics/sync — triggered right after posting
   subscriptionExpiry,
+  sweepOrphans,
 ]
 
 console.log(`[inngest] Serving ${functions.length} functions`)

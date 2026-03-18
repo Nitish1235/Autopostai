@@ -54,7 +54,9 @@ function StepPreview({
   onPublish,
   publishing,
 }: StepPreviewProps) {
-  const [postTiming, setPostTiming] = useState<PostTiming>('now')
+  const [postTiming, setPostTiming] = useState<PostTiming>(
+    scheduledAt ? 'schedule' : 'now'
+  )
   const [caption, setCaption] = useState('')
   const [captionPlatform, setCaptionPlatform] = useState<Platform>('tiktok')
   const [hashtags, setHashtags] = useState<string[]>([])

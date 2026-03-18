@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "@/lib/db/prisma"
+import { isAdminEmail } from "@/lib/utils/credits"
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -72,6 +73,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.id) {
         (session.user as any).id = token.id as string
+        (session.user as any).isAdmin = isAdminEmail(session.user.email)
       }
       return session
     },

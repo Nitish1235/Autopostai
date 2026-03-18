@@ -41,7 +41,8 @@ export default function PlatformsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [userPlan, setUserPlan] = useState<PlanId>('free')
-
+  const [isAdmin, setIsAdmin] = useState(false)
+ 
   const fetchPlatforms = useCallback(async () => {
     try {
       const [platformRes, userRes] = await Promise.all([
@@ -50,10 +51,11 @@ export default function PlatformsPage() {
       ])
       const platformData = await platformRes.json()
       const userData = await userRes.json()
-
+ 
       if (platformData.success) setPlatforms(platformData.data)
-      if (userData.success && userData.data?.plan) {
+      if (userData.success && userData.data) {
         setUserPlan(userData.data.plan as PlanId)
+        setIsAdmin(userData.data.isAdmin || false)
       }
     } catch {
       toast({ message: 'Failed to load platforms', type: 'error' })
@@ -151,7 +153,7 @@ export default function PlatformsPage() {
         avatarUrl: null,
         followerCount: null,
         autoPost: false,
-        dailyLimit: getDailyPostLimit(userPlan),
+        dailyLimit: isAdmin ? 50 : getDailyPostLimit(userPlan),
         postWindow: null,
         tokenExpiry: null,
         isExpired: false,

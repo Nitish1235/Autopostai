@@ -112,12 +112,7 @@ export async function addVideoToQueue(
     prebuiltScript,
   }
 
-  // Publish to worker's /jobs/script endpoint via QStash
-  await enqueueJob('/api/jobs/script', jobData as unknown as Record<string, unknown>, {
-    deduplicationId: `script-${videoId}`,
-  })
-
-  // Create RenderJob record in DB
+  // Create RenderJob record in DB FIRST
   await prisma.renderJob.upsert({
     where: { videoId },
     create: {
@@ -136,13 +131,18 @@ export async function addVideoToQueue(
     },
   })
 
-  // Update video status
+  // Update video status FIRST
   await prisma.video.update({
     where: { id: videoId },
     data: {
       status: 'generating_script',
       renderJobId: videoId,
     },
+  })
+
+  // Publish to worker's /jobs/script endpoint via QStash LAST
+  await enqueueJob('/api/jobs/script', jobData as unknown as Record<string, unknown>, {
+    deduplicationId: `script-${videoId}`,
   })
 }
 
@@ -167,12 +167,7 @@ export async function addAiVideoToQueue(
   videoId: string,
   jobData: AiVideoJobData
 ): Promise<void> {
-  // Publish to worker's /jobs/ai-video endpoint via QStash
-  await enqueueJob('/api/jobs/ai-video', jobData as unknown as Record<string, unknown>, {
-    deduplicationId: `ai-video-${videoId}`,
-  })
-
-  // Create RenderJob record in DB
+  // Create RenderJob record in DB FIRST
   await prisma.renderJob.upsert({
     where: { videoId },
     create: {
@@ -191,12 +186,17 @@ export async function addAiVideoToQueue(
     },
   })
 
-  // Update video status
+  // Update video status FIRST
   await prisma.video.update({
     where: { id: videoId },
     data: {
       status: 'generating_script',
       renderJobId: videoId,
     },
+  })
+
+  // Publish to worker's /jobs/ai-video endpoint via QStash LAST
+  await enqueueJob('/api/jobs/ai-video', jobData as unknown as Record<string, unknown>, {
+    deduplicationId: `ai-video-${videoId}`,
   })
 }

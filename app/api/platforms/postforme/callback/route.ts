@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { getDailyPostLimit, canAutoPost } from '@/lib/utils/plans'
+import { encryptToken } from '@/lib/utils/encryption'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const POSTFORME_API_URL = 'https://api.postforme.dev/v1'
@@ -91,7 +92,9 @@ export async function GET(request: Request) {
         const autoPostEnabled = canAutoPost(plan)
 
         // Upsert the platform connection.
-        // We store the PostForMe social account ID (spc_xxx) in the accessToken field
+        // We store the encrypted PostForMe social account ID (spc_xxx) in the accessToken field
+        
+        const encryptedToken = encryptToken(socialAccountId) || socialAccountId
         // since PostForMe manages the actual OAuth tokens internally.
         // dailyLimit is set to the user's plan limit — not a hardcoded value.
         await prisma.platformConnection.upsert({
@@ -105,7 +108,7 @@ export async function GET(request: Request) {
                 userId,
                 platform,
                 connected: true,
-                accessToken: socialAccountId, // PostForMe social account ID used for publishing
+                accessToken: encryptedToken, // Encrypted PostForMe social account ID
                 handle: username ?? `${platform}_user`,
                 displayName: username ?? `${platform} User`,
                 avatarUrl: avatarUrl ?? null,
@@ -114,7 +117,7 @@ export async function GET(request: Request) {
             },
             update: {
                 connected: true,
-                accessToken: socialAccountId,
+                accessToken: encryptedToken,
                 handle: username ?? `${platform}_user`,
                 displayName: username ?? `${platform} User`,
                 avatarUrl: avatarUrl ?? null,

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/db/prisma'
 import { getDailyPostLimit, clampDailyLimit } from '@/lib/utils/plans'
+import { isAdminEmail } from '@/lib/utils/credits'
 
 const VALID_PLATFORMS = ['tiktok', 'instagram', 'youtube', 'x']
 
@@ -57,10 +58,11 @@ export async function PATCH(
     // Fetch user plan for limit enforcement
     const userRecord = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: { plan: true, email: true },
     })
+    const isAdmin = isAdminEmail(userRecord?.email)
     const plan = userRecord?.plan ?? 'free'
-    const planMax = getDailyPostLimit(plan)
+    const planMax = isAdmin ? 50 : getDailyPostLimit(plan)
 
     // Find connection
     const connection = await prisma.platformConnection.findUnique({
@@ -79,8 +81,8 @@ export async function PATCH(
       )
     }
 
-    // Free users cannot enable autoPost or set any dailyLimit
-    if (plan === 'free') {
+    // Free users cannot enable autoPost or set any dailyLimit (Bypass for admin)
+    if (plan === 'free' && !isAdmin) {
       return NextResponse.json(
         {
           success: false,
@@ -96,7 +98,7 @@ export async function PATCH(
     if (parsed.data.autoPost !== undefined) updateData.autoPost = parsed.data.autoPost
     if (parsed.data.dailyLimit !== undefined) {
       // Silently clamp to plan max — don't let users exceed their tier
-      updateData.dailyLimit = clampDailyLimit(parsed.data.dailyLimit, plan)
+      updateData.dailyLimit = isAdmin ? parsed.data.dailyLimit : clampDailyLimit(parsed.data.dailyLimit, plan)
     }
     if (parsed.data.postWindow !== undefined) updateData.postWindow = parsed.data.postWindow
 

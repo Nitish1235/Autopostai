@@ -19,12 +19,14 @@ export const onVideoCreated = inngest.createFunction(
           email: true,
           name: true,
           notifyCreditLow: true,
+          lowCreditNotified: true,
         },
       })
 
       if (!user) return
 
-      if (user.credits <= 3 && user.notifyCreditLow && user.email) {
+      // Only notify if credits <= 3 AND we haven't already notified them this cycle!
+      if (user.credits <= 3 && user.notifyCreditLow && user.email && !user.lowCreditNotified) {
         // Dynamic import to avoid loading Resend at top-level
         const { Resend } = await import('resend')
         const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key')
@@ -50,6 +52,12 @@ export const onVideoCreated = inngest.createFunction(
               </a>
             </div>
           `,
+        })
+
+        // Flag that we've warned them so they don't get spammed next video
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lowCreditNotified: true },
         })
       }
     })

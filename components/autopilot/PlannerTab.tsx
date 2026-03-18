@@ -69,7 +69,7 @@ function isSameDay(a: Date, b: Date): boolean {
   )
 }
 
-export default function SchedulePage() {
+export function PlannerTab() {
   const { toast } = useToast()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'week' | 'month'>('week')
@@ -136,7 +136,7 @@ export default function SchedulePage() {
   const today = new Date()
 
   return (
-    <div className="px-8 py-7 max-w-[1200px]">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
@@ -280,9 +280,12 @@ export default function SchedulePage() {
                           </p>
                         </div>
                       ))}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                        <Plus size={12} className="text-[var(--text-dim)]" />
-                      </div>
+                      <Link
+                        href={`/create?scheduledAt=${new Date(date.setHours(hour, 0, 0, 0)).toISOString()}`}
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-[var(--bg-primary)]/40 hover:bg-[var(--bg-primary)]/60"
+                      >
+                        <Plus size={16} className="text-[var(--text-primary)]" />
+                      </Link>
                     </div>
                   )
                 })}
@@ -322,7 +325,7 @@ export default function SchedulePage() {
                   <div
                     key={di}
                     className={cn(
-                      'min-h-[120px] p-1.5 border-r border-[var(--border)] last:border-r-0',
+                      'min-h-[120px] p-1.5 border-r border-[var(--border)] last:border-r-0 relative group',
                       !isCurrentMonth && 'opacity-40'
                     )}
                   >
@@ -357,6 +360,12 @@ export default function SchedulePage() {
                         +{dayPosts.length - 3} more
                       </p>
                     )}
+                    <Link
+                      href={`/create?scheduledAt=${new Date(date.setHours(9, 0, 0, 0)).toISOString()}`}
+                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-[var(--bg-primary)]/20 hover:bg-[var(--bg-primary)]/40"
+                    >
+                      <Plus size={24} className="text-[var(--text-primary)]" />
+                    </Link>
                   </div>
                 )
               })}

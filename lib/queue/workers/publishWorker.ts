@@ -2,6 +2,7 @@ import { postToMultiplePlatforms, type PostPublishResult } from '@/lib/api/postf
 import { generateCaptions } from '@/lib/api/openai'
 import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
+import { decryptToken } from '@/lib/utils/encryption'
 import type { PublishJob } from '@/lib/queue/videoQueue'
 
 // ── Publish Handler ──────────────────────────────────
@@ -130,7 +131,7 @@ export async function handlePublishJob(data: PublishJob) {
         }
         return {
           platform: platform as string,
-          socialAccountId: conn.accessToken, // This is the PostForMe social account ID
+          socialAccountId: decryptToken(conn.accessToken) || conn.accessToken, // This is the decrypted PostForMe social account ID
         }
       })
       .filter(
