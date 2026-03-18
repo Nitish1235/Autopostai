@@ -230,7 +230,6 @@ export default function VideosPage() {
               items={[
                 { id: 'details', label: 'Details' },
                 { id: 'publish', label: 'Publish' },
-                { id: 'analytics', label: 'Analytics' },
                 { id: 'captions', label: 'Captions' },
               ]}
               active={drawerTab}
