@@ -79,7 +79,7 @@ function CreateWizard() {
     (user?.defaultFormat as VideoFormat) || '60s'
   )
   const [script, setScript] = useState<ScriptSegment[]>([])
-  const [voiceId, setVoiceId] = useState(user?.defaultVoiceId || 'ryan')
+  const [voiceId, setVoiceId] = useState(user?.defaultVoiceId || 'Noah')
   const [voiceSpeed, setVoiceSpeed] = useState(1.0)
   const [imageStyle, setImageStyle] = useState<ImageStyle>(
     (user?.defaultStyle as ImageStyle) || 'cinematic'
@@ -146,7 +146,7 @@ function CreateWizard() {
             setNiche(v.niche || 'finance')
             setFormat(v.format || '60s')
             setScript(v.script || [])
-            setVoiceId(v.voiceId || 'ryan')
+            setVoiceId(v.voiceId || 'Noah')
             setImageStyle(v.imageStyle || 'cinematic')
             setMusicMood(v.musicMood || 'upbeat')
             setSubtitleConfig(v.subtitleConfig || DEFAULT_SUBTITLE_CONFIG)

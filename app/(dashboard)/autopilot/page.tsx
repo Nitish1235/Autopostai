@@ -77,7 +77,7 @@ export default function AutopilotPage() {
   const [format, setFormat] = useState<VideoFormat>('60s')
   const [postsPerDay, setPostsPerDay] = useState(2)
   const [imageStyle, setImageStyle] = useState<ImageStyle>('cinematic')
-  const [voiceId, setVoiceId] = useState('ryan')
+  const [voiceId, setVoiceId] = useState('Noah')
   const [generationMode, setGenerationMode] = useState<'image_stack' | 'ai_video'>('image_stack')
   const [approvalMode, setApprovalMode] = useState<'review' | 'autopilot'>(
     'review'
@@ -104,7 +104,7 @@ export default function AutopilotPage() {
           setFormat((cfg.format as VideoFormat) || '60s')
           setPostsPerDay(cfg.postsPerDay ?? 2)
           setImageStyle((cfg.imageStyle as ImageStyle) || 'cinematic')
-          setVoiceId(cfg.voiceId || 'ryan')
+          setVoiceId(cfg.voiceId || 'Noah')
           setGenerationMode(cfg.generationMode || 'image_stack')
           setApprovalMode(cfg.approvalMode || 'review')
           if (cfg.schedule) {

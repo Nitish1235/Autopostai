@@ -6,33 +6,74 @@ const BASE_URL = 'https://api.v8.unrealspeech.com'
 const API_KEY = process.env.UNREAL_SPEECH_API_KEY!
 
 // ── Voice Mapping ────────────────────────────────────
+// Maps all frontend voice IDs → UnrealSpeech V8 canonical VoiceId strings.
+// Legacy aliases (ryan, sarah...) gracefully map to their nearest V8 equivalent
+// so existing DB records with old IDs continue to work.
 const VOICE_MAP: Record<string, string> = {
-  // Internal aliases → UnrealSpeech V8 canonical names
-  ryan: 'Dan',
-  sarah: 'Scarlett',
-  james: 'Will',
-  aria: 'Liv',
-  marcus: 'Dan',
-  elena: 'Scarlett',
-  emily: 'Scarlett',
-  Emily: 'Scarlett',
-  // Native V8 voices — pass through as-is
-  autumn: 'Autumn',
-  Autumn: 'Autumn',
-  noah: 'Noah',
-  Noah: 'Noah',
-  jasper: 'Jasper',
-  Jasper: 'Jasper',
-  scarlett: 'Scarlett',
-  Scarlett: 'Scarlett',
-  melody: 'Melody',
-  Melody: 'Melody',
-  dan: 'Dan',
-  Dan: 'Dan',
-  will: 'Will',
-  Will: 'Will',
-  liv: 'Liv',
-  Liv: 'Liv',
+  // ── Legacy aliases (kept for backward compat with existing video records) ──
+  ryan:   'Noah',
+  sarah:  'Autumn',
+  jake:   'Noah',
+  maya:   'Melody',
+  alex:   'Caleb',
+  luna:   'Luna',
+  james:  'Noah',
+  aria:   'Autumn',
+  marcus: 'Noah',
+  elena:  'Autumn',
+  dan:    'Noah',
+  will:   'Noah',
+  liv:    'Autumn',
+  scarlett:  'Autumn',
+  // ── American Female ─────────────────────────────────
+  'Autumn':  'Autumn',
+  'Melody':  'Melody',
+  'Hannah':  'Hannah',
+  'Emily':   'Emily',
+  'Ivy':     'Ivy',
+  'Kaitlyn': 'Kaitlyn',
+  'Luna':    'Luna',
+  'Willow':  'Willow',
+  'Lauren':  'Lauren',
+  'Sierra':  'Sierra',
+  // ── American Male ───────────────────────────────────
+  'Noah':    'Noah',
+  'Jasper':  'Jasper',
+  'Caleb':   'Caleb',
+  'Ronan':   'Ronan',
+  'Ethan':   'Ethan',
+  'Daniel':  'Daniel',
+  'Zane':    'Zane',
+  // ── French ──────────────────────────────────────────
+  'Élodie':  'Élodie',
+  // ── Spanish ─────────────────────────────────────────
+  'Lucía':   'Lucía',
+  'Mateo':   'Mateo',
+  'Javier':  'Javier',
+  // ── Portuguese ──────────────────────────────────────
+  'Camila':  'Camila',
+  'Thiago':  'Thiago',
+  'Rafael':  'Rafael',
+  // ── Italian ─────────────────────────────────────────
+  'Giulia':  'Giulia',
+  'Luca':    'Luca',
+  // ── Hindi ───────────────────────────────────────────
+  'Ananya':  'Ananya',
+  'Priya':   'Priya',
+  'Arjun':   'Arjun',
+  'Rohan':   'Rohan',
+  // ── Chinese ─────────────────────────────────────────
+  'Mei':     'Mei',
+  'Lian':    'Lian',
+  'Ting':    'Ting',
+  'Jing':    'Jing',
+  'Wei':     'Wei',
+  'Jian':    'Jian',
+  'Hao':     'Hao',
+  'Sheng':   'Sheng',
+  // ── Japanese ────────────────────────────────────────
+  'Yuki':    'Yuki',
+  'Haruto':  'Haruto',
 }
 
 // ── Interfaces ───────────────────────────────────────

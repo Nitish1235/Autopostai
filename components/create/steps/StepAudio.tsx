@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Volume2, Mic } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { VOICES } from '@/lib/utils/constants'
 import type { AiAudioMode, MusicMood } from '@/types'
 
 interface StepAudioProps {
@@ -16,14 +17,8 @@ interface StepAudioProps {
     onMusicVolumeChange: (vol: number) => void
 }
 
-const VOICE_PRESETS = [
-    { id: 'ryan', name: 'Ryan', desc: 'Confident Male' },
-    { id: 'sarah', name: 'Sarah', desc: 'Warm Female' },
-    { id: 'jake', name: 'Jake', desc: 'Deep Narrator' },
-    { id: 'maya', name: 'Maya', desc: 'Energetic Female' },
-    { id: 'alex', name: 'Alex', desc: 'Casual Male' },
-    { id: 'luna', name: 'Luna', desc: 'Smooth Female' },
-]
+// Use the canonical English voices from constants — same list as the image-stack voice step
+const AI_VOICE_PRESETS = VOICES.filter((v) => v.language === 'English')
 
 const MUSIC_MOODS: MusicMood[] = ['upbeat', 'dark', 'motivational', 'calm', 'mystery']
 
@@ -131,7 +126,7 @@ function StepAudio({
                             Voice
                         </p>
                         <div className="grid grid-cols-3 gap-2">
-                            {VOICE_PRESETS.map((voice) => (
+                            {AI_VOICE_PRESETS.map((voice) => (
                                 <button
                                     key={voice.id}
                                     type="button"
@@ -147,7 +142,7 @@ function StepAudio({
                                         {voice.name}
                                     </span>
                                     <span className="text-[11px] text-[var(--text-dim)]">
-                                        {voice.desc}
+                                        {voice.accent} &bull; {voice.gender}
                                     </span>
                                 </button>
                             ))}
