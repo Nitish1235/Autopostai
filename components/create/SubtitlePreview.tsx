@@ -22,8 +22,9 @@ const STYLE_GRADIENTS: Record<string, string> = {
 }
 
 // Phone mockup renders at ~220px wide representing a 1080px real frame.
-// Scale factor: 220/1080 ≈ 0.204, rounded to 0.21 for slightly larger preview text.
-const PREVIEW_SCALE = 0.21
+// Scale factor: 220/1080 ≈ 0.204.
+// We use 0.28 to make the preview text specifically more readable in the UI.
+const PREVIEW_SCALE = 0.28
 
 const SAMPLE_WORDS = ['This', 'is', 'how', 'your', 'subtitles', 'will', 'look']
 
@@ -56,8 +57,8 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
     const base: React.CSSProperties = {
       fontFamily,
       fontSize: `${scaledFontSize}px`,
-      fontWeight: 800,
-      lineHeight: 1.2,
+      fontWeight: 700,
+      lineHeight: 1.1,
       textTransform: config.uppercase ? 'uppercase' : 'none',
       color,
       transition: `all ${config.animationDuration}ms ease`,
@@ -125,17 +126,31 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
                 borderRadius: `${(config.bgRadius || 4) * PREVIEW_SCALE}px`,
                 zIndex: 0,
                 margin: '-1px -2px',
+                boxShadow: config.shadow ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
               }}
             />
           )}
 
           {/* Words */}
-          <div className="relative flex flex-wrap gap-px" style={{ zIndex: 1 }}>
-            {SAMPLE_WORDS.map((word, i) => (
-              <span key={i} style={getWordStyle(i)}>
-                {word}
-              </span>
-            ))}
+          <div className="relative flex flex-col items-center w-full" style={{ zIndex: 1 }}>
+            {(() => {
+              const chunks = []
+              for (let i = 0; i < SAMPLE_WORDS.length; i += config.maxWordsPerLine) {
+                chunks.push(SAMPLE_WORDS.slice(i, i + config.maxWordsPerLine))
+              }
+              return chunks.map((chunk, chunkIdx) => (
+                <div key={chunkIdx} className="flex flex-wrap justify-center gap-1">
+                  {chunk.map((word, wordIdx) => {
+                    const globalIdx = chunkIdx * config.maxWordsPerLine + wordIdx
+                    return (
+                      <span key={globalIdx} style={getWordStyle(globalIdx)}>
+                        {word}
+                      </span>
+                    )
+                  })}
+                </div>
+              ))
+            })()}
           </div>
         </div>
       </div>
