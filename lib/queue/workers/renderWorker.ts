@@ -95,7 +95,7 @@ export async function handleRenderJob(data: RenderJob) {
       musicVolume: video.musicVolume,
       format: video.format,
       imageStyle: video.imageStyle,
-      masterAudioUrl: video.masterAudioUrl ?? '',
+      masterAudioUrl: video.masterAudioUrl === 'skipped' ? '' : (video.masterAudioUrl ?? ''),
       masterWordTimestamps: video.masterWordTimestamps as any[],
     })
 

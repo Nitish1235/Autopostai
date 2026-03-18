@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { VoiceManager } from './VoiceManager'
+import { ShowcaseGenerator } from './ShowcaseGenerator'
 import {
     Video,
     Music,
@@ -19,6 +20,7 @@ import {
     Layers,
     GalleryHorizontalEnd,
     LayoutGrid,
+    Wand2,
 } from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────
@@ -95,7 +97,7 @@ async function uploadFile(
 // ── Main Admin Page ──────────────────────────────────
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'videos' | 'music' | 'styles' | 'voices'>(
+    const [activeTab, setActiveTab] = useState<'videos' | 'music' | 'styles' | 'voices' | 'generator'>(
         'videos'
     )
 
@@ -113,6 +115,7 @@ export default function AdminDashboard() {
             <div className="flex gap-1 p-1 bg-[#12121a] rounded-xl border border-[#1e1e2e] mb-8 w-fit">
                 {[
                     { id: 'videos' as const, label: 'Showcase Videos', icon: Video },
+                    { id: 'generator' as const, label: 'Showcase Autopilot', icon: Wand2 },
                     { id: 'music' as const, label: 'Music Library', icon: Music },
                     { id: 'styles' as const, label: 'Image Styles', icon: Palette },
                     { id: 'voices' as const, label: 'Voice Previews', icon: Mic },
@@ -136,6 +139,7 @@ export default function AdminDashboard() {
 
             {/* Content */}
             {activeTab === 'videos' && <VideoManager />}
+            {activeTab === 'generator' && <ShowcaseGenerator />}
             {activeTab === 'music' && <MusicManager />}
             {activeTab === 'styles' && <StyleManager />}
             {activeTab === 'voices' && <VoiceManager />}

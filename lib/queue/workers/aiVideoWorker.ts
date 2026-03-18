@@ -85,7 +85,7 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
 
         let finalVideoUrl: string
 
-        if (aiAudioMode === 'replace') {
+        if (aiAudioMode === 'replace' && !data.skipAudio) {
             await updateProgress(videoId, 'generating_voice', 60)
             await prisma.video.update({
                 where: { id: videoId },

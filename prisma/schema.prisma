@@ -101,6 +101,10 @@ model Video {
   // Subtitle config stored as JSON
   subtitleConfig Json     @default("{}")
 
+  // Admin / Showcase
+  isShowcase    Boolean   @default(false)
+  skipAudio     Boolean   @default(false)
+
   // Generated content
   script      Json?       // ScriptSegment[]
   masterAudioUrl String?  // Single TTS file spanning the entire video

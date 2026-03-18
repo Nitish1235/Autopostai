@@ -26,6 +26,8 @@ export interface ScriptJob {
     imagePrompt: string
     duration?: number
   }>
+  skipAudio?: boolean
+  isShowcase?: boolean
 }
 
 export interface ImageJob {
@@ -47,6 +49,7 @@ export interface VoiceJob {
   voiceId: string
   voiceSpeed: number
   totalSegments: number // We keep this for progress reporting
+  skipAudio?: boolean
 }
 
 export interface RenderJob {
@@ -82,6 +85,8 @@ export interface AiVideoJobData {
   musicMood?: string
   musicVolume?: number
   subtitleConfig?: Record<string, unknown>
+  skipAudio?: boolean
+  isShowcase?: boolean
 }
 
 // ── Queue Functions ──────────────────────────────────
@@ -97,7 +102,9 @@ export async function addVideoToQueue(
   voiceId: string,
   voiceSpeed: number,
   // FIX #3: pass user-edited script to avoid re-generating via OpenAI
-  prebuiltScript?: ScriptJob['prebuiltScript']
+  prebuiltScript?: ScriptJob['prebuiltScript'],
+  skipAudio?: boolean,
+  isShowcase?: boolean
 ): Promise<void> {
   const jobData: ScriptJob = {
     videoId,
@@ -110,6 +117,8 @@ export async function addVideoToQueue(
     voiceId,
     voiceSpeed,
     prebuiltScript,
+    skipAudio,
+    isShowcase,
   }
 
   // Create RenderJob record in DB FIRST

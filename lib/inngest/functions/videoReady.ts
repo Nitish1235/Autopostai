@@ -23,6 +23,8 @@ export const onVideoReady = inngest.createFunction(
           thumbnailUrl: true,
           platforms: true,
           videoUrl: true,
+          isShowcase: true,
+          niche: true,
         },
       })
 
@@ -54,7 +56,28 @@ export const onVideoReady = inngest.createFunction(
     const { video, user, autopilotConfig } = context
     const approvalMode = autopilotConfig?.approvalMode ?? 'review'
 
-    // Step 2 — Send notification
+    // Step 2 — Handle Admin Showcase
+    const isShowcaseHandled = await step.run('handle-admin-showcase', async () => {
+      if (video.isShowcase && video.videoUrl) {
+        await prisma.adminShowcaseVideo.create({
+          data: {
+            title: video.title,
+            niche: video.niche ?? 'general',
+            videoUrl: video.videoUrl,
+            thumbnailUrl: video.thumbnailUrl,
+            active: true,
+          }
+        })
+        return true
+      }
+      return false
+    })
+
+    if (isShowcaseHandled) {
+      return { processed: true, reason: 'Showcase video saved to DB' }
+    }
+
+    // Step 3 — Send notification
     await step.run('send-notification', async () => {
       if (user.notifyVideoReady && user.email) {
         try {
@@ -73,7 +96,7 @@ export const onVideoReady = inngest.createFunction(
       }
     })
 
-    // Step 3 — Handle autopilot posting
+    // Step 4 — Handle autopilot posting
     await step.run('handle-autopilot-posting', async () => {
       if (approvalMode === 'autopilot') {
         // Immediately add ONE combined publish job for ALL platforms
@@ -96,7 +119,7 @@ export const onVideoReady = inngest.createFunction(
       }
     })
 
-    // Step 4 — Handle review mode with 24h deadline
+    // Step 5 — Handle review mode with 24h deadline
     if (approvalMode === 'review') {
       // Wait 23 hours
       await step.sleep('review-deadline-wait', '23h')

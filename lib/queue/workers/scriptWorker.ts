@@ -168,26 +168,37 @@ export async function handleScriptJob(data: ScriptJob) {
       data: { progress: 55 },
     })
 
-    // 7. Queue voice generation job via QStash
-    // We queue voice rendering to handle ElevenLabs latency
-    const masterNarration = scriptSegments.map((s) => s.narration).join(' ')
+    // 7. Queue voice generation job via QStash or skip it
+    if (data.skipAudio) {
+      console.log(`[scriptWorker] skipAudio is true. Bypassing TTS generation for ${videoId}.`)
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { masterAudioUrl: 'skipped' },
+      })
+      
+      const { checkAndTriggerRender } = await import('./renderTrigger')
+      await checkAndTriggerRender(videoId, userId)
+    } else {
+      // We queue voice rendering to handle ElevenLabs latency
+      const masterNarration = scriptSegments.map((s) => s.narration).join(' ')
 
-    const voiceJobData: VoiceJob = {
-      videoId,
-      userId,
-      narration: masterNarration,
-      voiceId,
-      voiceSpeed,
-      totalSegments: scriptSegments.length,
+      const voiceJobData: VoiceJob = {
+        videoId,
+        userId,
+        narration: masterNarration,
+        voiceId,
+        voiceSpeed,
+        totalSegments: scriptSegments.length,
+      }
+
+      await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
+        deduplicationId: `voice-${videoId}-master`,
+      })
+
+      console.log(
+        `[scriptWorker] Script and Images done. Queued 1 master voice job.`
+      )
     }
-
-    await enqueueJob('/api/jobs/voice', voiceJobData as unknown as Record<string, unknown>, {
-      deduplicationId: `voice-${videoId}-master`,
-    })
-
-    console.log(
-      `[scriptWorker] Script and Images done. Queued 1 master voice job.`
-    )
 
     return { success: true, segmentCount: scriptSegments.length, imagesGenerated: finalUploads.length }
   } catch (error) {
