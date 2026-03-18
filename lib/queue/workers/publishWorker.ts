@@ -191,18 +191,15 @@ export async function handlePublishJob(data: PublishJob) {
       mergedPublished.includes(p)
     )
 
-    // IMPROVED: Only mark as 'failed' if it's not already 'posted' 
-    // and if we actually attempted and failed ALL remaining platforms.
-    // Otherwise, keep it 'ready' so the user can connect and retry.
     let finalStatus = video.status
     if (allTargetsDone) {
       finalStatus = 'posted'
-    } else if (failedPlatforms.length > 0) {
-      // If we have some failures, we mark as 'failed' ONLY if the video isn't 'posted' already
-      // This allows the UI to show a 'Retry' but the video remains in the Drafts/Ready pool
-      finalStatus = 'failed'
     } else if (successfulPlatforms.length > 0 && !allTargetsDone) {
-      // Partial success
+      // Partial success — keep ready so user can retry remaining platforms
+      finalStatus = 'ready'
+    } else if (failedPlatforms.length > 0 && successfulPlatforms.length === 0) {
+      // Total failure — keep as 'ready' so user can retry (NOT 'failed')
+      // 'failed' should only be set for video generation failures, not publish failures
       finalStatus = 'ready'
     }
 
@@ -284,10 +281,16 @@ export async function handlePublishJob(data: PublishJob) {
             statuses[p] = 'failed'
           }
         }
+        // IMPORTANT: Keep video in 'ready' status so user can retry publishing.
+        // Only mark platform-specific statuses as failed, not the video itself.
+        // Video 'failed' status should only be set for generation failures.
+        const keepStatus = ['ready', 'scheduled', 'posted'].includes(video.status)
+          ? video.status
+          : 'ready'
         await prisma.video.update({
           where: { id: videoId },
           data: {
-            status: 'failed',
+            status: keepStatus,
             platformStatuses: statuses,
             errorMessage: `Publishing failed: ${message}`,
           },

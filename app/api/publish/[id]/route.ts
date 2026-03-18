@@ -71,12 +71,14 @@ export async function POST(
       )
     }
 
-    // Must be in 'ready' or 'posted' status (posted = re-publish remaining)
-    if (video.status !== 'ready' && video.status !== 'posted') {
+    // Allow publish/retry from: ready, scheduled, posted, failed
+    // 'failed' = previous publish attempt had a platform error — user should be able to retry
+    const publishableStatuses = ['ready', 'scheduled', 'posted', 'failed']
+    if (!publishableStatuses.includes(video.status)) {
       return NextResponse.json(
         {
           success: false,
-          error: `Cannot publish: video is in "${video.status}" status`,
+          error: `Cannot publish: video is still processing (status: "${video.status}"). Please wait for it to finish.`,
         },
         { status: 400 }
       )
@@ -84,7 +86,7 @@ export async function POST(
 
     if (!video.videoUrl) {
       return NextResponse.json(
-        { success: false, error: 'Video URL not available' },
+        { success: false, error: 'Video URL not available yet' },
         { status: 400 }
       )
     }
@@ -106,10 +108,15 @@ export async function POST(
       currentStatuses[p] = 'pending'
     }
 
-    // Update video with platforms and statuses
+    // Update video with platforms, statuses and reset to 'ready' if it was 'failed'
     const updateData: Record<string, unknown> = {
       platforms,
       platformStatuses: currentStatuses,
+    }
+
+    // Reset failed status to 'ready' so publish worker can operate on it
+    if (video.status === 'failed') {
+      updateData.status = 'ready'
     }
 
     if (scheduledAt) {
