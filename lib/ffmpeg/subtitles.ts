@@ -51,9 +51,25 @@ const FONT_NAME_MAP: Record<SubtitleFont, string> = {
 
 // ── Hex to ASS Color ─────────────────────────────────
 
-export function hexToASSColor(hex: string, alpha: number = 0): string {
-  // Strip leading #
-  const clean = hex.replace('#', '')
+export function hexToASSColor(hex: string | undefined | null, alpha: number = 0): string {
+  // Fallback for missing hex
+  if (!hex || typeof hex !== 'string') {
+    return hexToASSColor('#FFFFFF', alpha)
+  }
+
+  // Handle rgba/rgb strings if they accidentally leak in (just strip and try to parse)
+  // Or if it doesn't have a #
+  let clean = hex.replace('#', '')
+  
+  // If it's a short hex (3 chars), expand it
+  if (clean.length === 3) {
+    clean = clean.split('').map(c => c + c).join('')
+  }
+
+  // If it's still not 6 chars (e.g. "rgba(255,255,255,0.5)"), fallback to white
+  if (clean.length !== 6) {
+    return hexToASSColor('#FFFFFF', alpha)
+  }
 
   // Parse RGB
   const r = parseInt(clean.substring(0, 2), 16)
@@ -72,11 +88,13 @@ export function hexToASSColor(hex: string, alpha: number = 0): string {
 // ── Build ASS Style ──────────────────────────────────
 
 export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
-  const fontName = FONT_NAME_MAP[subtitleConfig.font] ?? 'Inter'
+  // Ensure we have a config object
+  const conf = subtitleConfig || {}
+  const fontName = FONT_NAME_MAP[conf.font as SubtitleFont] ?? 'Inter'
 
   // Alignment: ASS numpad style (bottom: 1=left, 2=center, 3=right)
   let alignment = 2
-  switch (subtitleConfig.alignment) {
+  switch (conf.alignment) {
     case 'left':
       alignment = 1
       break
@@ -89,14 +107,13 @@ export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
   }
 
   // MarginV: distance from bottom edge in pixels.
-  // In ASS, marginV=40 means 40px from bottom (alignment 1/2/3).
-  // User's 'position': 0 = top of frame, 100 = bottom of frame.
-  // We invert so position=75 (near-bottom UI) → small marginV (stays near bottom).
-  const maxMargin = 1920 - 80 - subtitleConfig.fontSize
-  const marginV = Math.round(40 + ((100 - subtitleConfig.position) / 100) * (maxMargin - 40))
+  const fontSize = conf.fontSize || 64
+  const position = conf.position ?? 75
+  const maxMargin = 1920 - 80 - fontSize
+  const marginV = Math.round(40 + ((100 - position) / 100) * (maxMargin - 40))
 
-  // Normalize raw opacity inputs. UI might accidentally pass percentages (0-100) instead of floats (0-1).
-  let normalizedOpacity = subtitleConfig.bgOpacity
+  // Normalize raw opacity inputs.
+  let normalizedOpacity = conf.bgOpacity ?? 0.8
   if (normalizedOpacity > 1) {
     normalizedOpacity = normalizedOpacity / 100
   }
@@ -108,12 +125,12 @@ export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
   return {
     name: 'Default',
     fontName,
-    fontSize: subtitleConfig.fontSize,
-    primaryColor: hexToASSColor(subtitleConfig.primaryColor),
-    secondaryColor: hexToASSColor(subtitleConfig.activeColor),
-    outlineColor: hexToASSColor(subtitleConfig.strokeColor),
-    backColor: subtitleConfig.backgroundBox
-      ? hexToASSColor(subtitleConfig.bgColor, bgAlpha)
+    fontSize,
+    primaryColor: hexToASSColor(conf.primaryColor || '#FFFFFF'),
+    secondaryColor: hexToASSColor(conf.activeColor || '#0A84FF'),
+    outlineColor: hexToASSColor(conf.strokeColor || '#000000'),
+    backColor: conf.backgroundBox
+      ? hexToASSColor(conf.bgColor || '#000000', bgAlpha)
       : hexToASSColor('#000000', 255),
     bold: false,
     italic: false,
@@ -121,9 +138,9 @@ export function buildASSStyle(subtitleConfig: SubtitleConfig): ASSStyle {
     scaleX: 100,
     scaleY: 100,
     spacing: 0,
-    borderStyle: subtitleConfig.backgroundBox ? 3 : 1,
-    outline: subtitleConfig.strokeWidth,
-    shadow: subtitleConfig.shadow ? 2 : 0,
+    borderStyle: conf.backgroundBox ? 3 : 1,
+    outline: conf.strokeWidth ?? 2,
+    shadow: conf.shadow ? 2 : 0,
     alignment,
     marginL: 40,
     marginR: 40,

@@ -172,8 +172,8 @@ export function WeeklyReportEmail({
                     ? 'rgba(255, 69, 58, 0.12)'
                     : 'rgba(48, 209, 88, 0.12)',
                 border: `1px solid ${creditsRemaining < 10
-                    ? 'rgba(255, 69, 58, 0.25)'
-                    : 'rgba(48, 209, 88, 0.25)'
+                  ? 'rgba(255, 69, 58, 0.25)'
+                  : 'rgba(48, 209, 88, 0.25)'
                   }`,
               }}
             >
