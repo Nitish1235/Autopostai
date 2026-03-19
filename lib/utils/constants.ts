@@ -95,8 +95,8 @@ export const AI_VIDEO_DURATION = {
 } as const
 
 export const CRUN_AI_MODELS = {
-  sora2: 'openai/sora2',
-  sora2Pro: 'openai/sora2-pro',
+  sora2: 'sora-2-pro-text-to-video',
+  sora2Pro: 'sora-2-pro-text-to-video',
 } as const
 
 // Plan tier ranking for upgrade/downgrade comparison

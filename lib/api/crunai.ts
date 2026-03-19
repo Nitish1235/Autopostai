@@ -118,7 +118,7 @@ export async function generateVideo(params: {
                 input: {
                     prompt: params.prompt,
                     aspect_ratio: '9:16',
-                    duration,
+                    n_frames: `${duration}s`,
                 },
             },
             {
