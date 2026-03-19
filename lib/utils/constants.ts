@@ -91,7 +91,7 @@ export const AI_VIDEO_LIMITS: Record<string, number> = {
 export const AI_VIDEO_DURATION = {
   min: 10,
   max: 15,
-  default: 12,
+  default: 15,
 } as const
 
 export const CRUN_AI_MODELS = {
