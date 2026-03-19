@@ -59,7 +59,6 @@ function StepVoice({ voiceId, onVoiceChange, voiceSpeed, onSpeedChange }: StepVo
   }, [])
 
   const handlePlay = (voice: (typeof VOICES)[0], e: React.MouseEvent) => {
-    e.stopPropagation()
     if (!audioRef.current) return
 
     if (playingVoice === voice.id) {
