@@ -23,6 +23,7 @@ import type {
 } from '@/types'
 
 const FORMAT_OPTIONS: { id: VideoFormat; label: string }[] = [
+  { id: '10s', label: '10s' },
   { id: '15s', label: '15s' },
   { id: '30s', label: '30s' },
   { id: '60s', label: '60s' },
@@ -144,10 +145,10 @@ export default function AutopilotPage() {
     fetchConfig()
   }, [toast])
 
-  // Force 15s for AI Video
+  // Force 10s for AI Video
   useEffect(() => {
-    if (generationMode === 'ai_video' && format !== '15s') {
-      setFormat('15s')
+    if (generationMode === 'ai_video' && format !== '10s') {
+      setFormat('10s')
     }
   }, [generationMode, format])
 
@@ -367,7 +368,7 @@ export default function AutopilotPage() {
                 <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">Format</label>
                 <div className="flex gap-1.5">
                   {FORMAT_OPTIONS.filter(opt =>
-                    generationMode === 'ai_video' ? opt.id === '15s' : opt.id !== '15s'
+                    generationMode === 'ai_video' ? opt.id === '10s' : opt.id !== '10s'
                   ).map((opt) => (
                     <button
                       key={opt.id}

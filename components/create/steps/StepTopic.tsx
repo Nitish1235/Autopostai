@@ -19,6 +19,7 @@ interface StepTopicProps {
   onAiDurationChange?: (duration: number) => void
 }
 const FORMAT_OPTIONS: { id: VideoFormat; label: string }[] = [
+  { id: '10s', label: '10s' },
   { id: '15s', label: '15s' },
   { id: '30s', label: '30–40s' },
   { id: '60s', label: '60–90s' },
@@ -160,7 +161,7 @@ function StepTopic({
         {/* Format selector */}
         <div className="flex gap-1.5">
           {FORMAT_OPTIONS.filter(opt =>
-            isAiVideo ? opt.id === '15s' : opt.id !== '15s'
+            isAiVideo ? opt.id === '10s' : opt.id !== '10s'
           ).map((opt) => (
             <button
               key={opt.id}

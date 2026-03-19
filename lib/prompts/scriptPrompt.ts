@@ -80,6 +80,8 @@ Generate exactly ${segmentCount} segments. No more, no less.`
 
 export function getDurationPerSegment(format: string): number {
   switch (format) {
+    case '10s':
+      return 3.5
     case '15s':
       return 3.5
     case '30s':
@@ -95,6 +97,8 @@ export function getDurationPerSegment(format: string): number {
 
 export function getNarrationLength(format: string): number {
   switch (format) {
+    case '10s':
+      return 15
     case '15s':
       return 18
     case '30s':
@@ -110,6 +114,8 @@ export function getNarrationLength(format: string): number {
 
 export function getSegmentCount(format: string): number {
   switch (format) {
+    case '10s':
+      return 3
     case '15s':
       return 5
     case '30s':

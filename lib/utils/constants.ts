@@ -401,6 +401,7 @@ export const IMAGE_COUNT: Record<
   VideoFormat,
   { min: number; max: number; default: number }
 > = {
+  '10s': { min: 3, max: 4, default: 3 },
   '15s': { min: 4, max: 6, default: 5 },
   '30s': { min: 10, max: 12, default: 11 },
   '60s': { min: 18, max: 22, default: 20 },

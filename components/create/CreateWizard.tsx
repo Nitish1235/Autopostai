@@ -169,10 +169,10 @@ function CreateWizard() {
     }
   }, [videoId]) // Only run if no videoId is currently active
 
-  // Force 15s for AI Video
+  // Force 10s for AI Video
   useEffect(() => {
-    if (generationMode === 'ai_video' && format !== '15s') {
-      setFormat('15s')
+    if (generationMode === 'ai_video' && format !== '10s') {
+      setFormat('10s')
     }
   }, [generationMode, format])
 

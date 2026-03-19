@@ -25,7 +25,7 @@ export async function POST(request: Request) {
           userId,
           topic: `${testTopic} (${mode})`,
           niche: 'finance',
-          format: mode === 'ai_video' ? '15s' : '30s',
+          format: mode === 'ai_video' ? '10s' : '30s',
           imageStyle: 'cinematic',
           voiceId: 'ryan',
           voiceSpeed: 1.0,

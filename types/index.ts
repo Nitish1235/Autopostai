@@ -15,7 +15,7 @@ export type Platform = 'tiktok' | 'instagram' | 'youtube' | 'x'
 
 export type PlatformStatus = 'posted' | 'pending' | 'failed' | 'skipped'
 
-export type VideoFormat = '15s' | '30s' | '60s' | '90s'
+export type VideoFormat = '10s' | '15s' | '30s' | '60s' | '90s'
 
 export type ImageStyle =
   | 'cinematic'

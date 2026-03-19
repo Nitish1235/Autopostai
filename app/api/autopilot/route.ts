@@ -10,7 +10,7 @@ import { inngest } from '@/lib/inngest/client'
 const UpdateSchema = z.object({
   enabled: z.boolean().optional(),
   niche: z.string().optional(),
-  format: z.enum(['15s', '30s', '60s', '90s']).optional(),
+  format: z.enum(['10s', '15s', '30s', '60s', '90s']).optional(),
   postsPerDay: z.number().int().min(1).max(24).optional(),
   imageStyle: z.string().optional(),
   voiceId: z.string().optional(),

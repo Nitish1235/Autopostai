@@ -13,7 +13,7 @@ import { inngest } from '@/lib/inngest/client'
 const schema = z.object({
   topic: z.string().min(10).max(500),
   niche: z.string(),
-  format: z.enum(['15s', '30s', '60s', '90s']),
+  format: z.enum(['10s', '15s', '30s', '60s', '90s']),
   imageStyle: z.string(),
   voiceId: z.string(),
   voiceSpeed: z.number().min(0.75).max(1.5),
