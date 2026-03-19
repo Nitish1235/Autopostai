@@ -123,7 +123,7 @@ export const autopilotCron = inngest.createFunction(
           },
         })
 
-        if (todayPostCount >= effectiveDailyMax) return
+        if (todayPostCount >= effectiveDailyMax && !isAdmin) return
 
         // d. Duplicate-run prevention
         const hourStart = new Date()
@@ -135,7 +135,7 @@ export const autopilotCron = inngest.createFunction(
             createdAt: { gte: hourStart },
           },
         })
-        if (alreadyFiredThisHour > 0) return
+        if (alreadyFiredThisHour > 0 && !isAdmin) return
 
         // e. Get next pending topic from queue
         const topic = await prisma.topicQueue.findFirst({
