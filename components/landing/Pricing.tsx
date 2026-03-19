@@ -34,6 +34,7 @@ const PLANS: PricingPlan[] = [
     description: 'Perfect for getting started with faceless video content.',
     features: [
       '30 AI-generated faceless videos/month',
+      'No AI video generation',
       'Auto-post 1 video/day across all connected platforms',
       'AI script generation from any topic',
       'Choose from 30s, 60s, or 90s video lengths',
@@ -60,6 +61,7 @@ const PLANS: PricingPlan[] = [
     description: 'For creators serious about growing their channels.',
     features: [
       '100 AI-generated faceless videos/month',
+      '15 AI video clips per month',
       'Auto-post 2 videos/day across all connected platforms',
       'Everything in Starter, plus:',
       'Advanced subtitle styles & animations',
@@ -82,6 +84,7 @@ const PLANS: PricingPlan[] = [
     description: 'Maximum output for full-time content creators.',
     features: [
       '300 AI-generated faceless videos/month',
+      '50 AI video clips per month',
       'Auto-post 4 videos/day across all connected platforms',
       'Everything in Pro, plus:',
       'Full autopilot — set topics & let AI handle everything',
