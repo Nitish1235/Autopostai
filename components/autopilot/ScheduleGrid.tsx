@@ -90,7 +90,7 @@ function ScheduleGrid({
     <div className="space-y-4">
       <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-[8px]">
         <p className="text-[12px] text-indigo-400 font-medium">
-          ⏱️ All schedule times are in UTC
+          ⏱️ Times are evaluated in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
         </p>
         <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
           Slots with a 🚫 badge have already passed and will not run until next week.

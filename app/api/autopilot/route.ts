@@ -30,6 +30,7 @@ const UpdateSchema = z.object({
   subtitleConfig: z.record(z.unknown()).optional(),
   aiOptimizeTime: z.boolean().optional(),
   generationMode: z.enum(['image_stack', 'ai_video']).optional(),
+  timezone: z.string().optional(),
 })
 
 // ── GET — Get Autopilot Config ───────────────────────
@@ -116,6 +117,7 @@ export async function PUT(request: Request) {
     if (data.subtitleConfig !== undefined) updateData.subtitleConfig = data.subtitleConfig
     if (data.aiOptimizeTime !== undefined) updateData.aiOptimizeTime = data.aiOptimizeTime
     if (data.generationMode !== undefined) updateData.generationMode = data.generationMode
+    if (data.timezone !== undefined) updateData.timezone = data.timezone
 
     const config = await prisma.autopilotConfig.upsert({
       where: { userId: userId },

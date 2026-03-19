@@ -75,8 +75,22 @@ export const autopilotCron = inngest.createFunction(
 
         // b-2. Check schedule: does current time match any slot?
         const now = new Date()
-        const currentDay = DAY_NAMES[now.getUTCDay()]
-        const currentHour = now.getUTCHours()
+        const timeZone = config.timezone || 'UTC'
+
+        // Format to get user's local hour (0-23) and weekday
+        const formatterHour = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          hour: 'numeric',
+          hourCycle: 'h23',
+        })
+        const formatterDay = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          weekday: 'long',
+        })
+
+        const currentHour = parseInt(formatterHour.format(now), 10)
+        const currentDay = formatterDay.format(now).toLowerCase() as keyof WeeklySchedule
+
 
         let schedule: WeeklySchedule
         try {
@@ -222,7 +236,7 @@ export const autopilotCron = inngest.createFunction(
             data: { 
                 consecutiveFailures: 0,
                 lastRunAt: new Date(),
-                nextRunAt: getNextScheduledSlot(schedule)
+                nextRunAt: getNextScheduledSlot(schedule, timeZone)
             } as any
           })
 
@@ -291,9 +305,17 @@ const DAY_ORDER: (keyof WeeklySchedule)[] = [
   'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
 ]
 
-function getNextScheduledSlot(schedule: WeeklySchedule): Date {
+function getNextScheduledSlot(schedule: WeeklySchedule, timeZone: string = 'UTC'): Date {
   const now = new Date()
-  const currentDayIndex = now.getUTCDay()
+
+  const formatterHour = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' })
+  const formatterMin = new Intl.DateTimeFormat('en-US', { timeZone, minute: 'numeric' })
+  const formatterDay = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' })
+
+  const currentHour = parseInt(formatterHour.format(now), 10)
+  const currentMin = parseInt(formatterMin.format(now), 10)
+  const currentDayName = formatterDay.format(now).toLowerCase() as keyof WeeklySchedule
+  const currentDayIndex = DAY_ORDER.indexOf(currentDayName)
 
   for (let offset = 0; offset < 7; offset++) {
     const dayIndex = (currentDayIndex + offset) % 7
@@ -305,17 +327,20 @@ function getNextScheduledSlot(schedule: WeeklySchedule): Date {
       .sort((a, b) => a.time.localeCompare(b.time))
 
     for (const slot of enabledSlots) {
-      const [hours, minutes] = slot.time.split(':').map(Number)
-      const candidate = new Date(now)
-      candidate.setUTCDate(candidate.getUTCDate() + offset)
-      candidate.setUTCHours(hours, minutes, 0, 0)
-
-      if (candidate > now) return candidate
+      const [slotH, slotM] = slot.time.split(':').map(Number)
+      
+      if (offset === 0) {
+        if (slotH > currentHour || (slotH === currentHour && slotM > currentMin)) {
+          const diffMins = (slotH - currentHour) * 60 + (slotM - currentMin)
+          return new Date(now.getTime() + diffMins * 60000)
+        }
+      } else {
+        const diffMins = (offset * 24 * 60) + (slotH * 60 + slotM) - (currentHour * 60 + currentMin)
+        return new Date(now.getTime() + diffMins * 60000)
+      }
     }
   }
 
-  const fallback = new Date(now)
-  fallback.setUTCDate(fallback.getUTCDate() + 1)
-  fallback.setUTCHours(18, 0, 0, 0)
-  return fallback
+  // Fallback to exactly 24 hours from now
+  return new Date(now.getTime() + 24 * 60 * 60 * 1000)
 }

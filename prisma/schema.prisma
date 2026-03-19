@@ -236,6 +236,7 @@ model AutopilotConfig {
 
   // AI optimal time toggle
   aiOptimizeTime  Boolean   @default(false)
+  timezone        String    @default("UTC")
 
   // Last run metadata
   lastRunAt       DateTime?

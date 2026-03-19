@@ -183,6 +183,7 @@ export default function AutopilotPage() {
           niche, format, postsPerDay, imageStyle, voiceId,
           generationMode, approvalMode, schedule,
           aiOptimizeTime: aiOptimize,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       })
       const data = await res.json()
