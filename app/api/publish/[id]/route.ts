@@ -11,7 +11,7 @@ const PublishSchema = z.object({
   platforms: z.array(
     z.enum(['tiktok', 'instagram', 'youtube', 'x'])
   ).min(1),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().datetime().nullable().optional(),
 })
 
 // ── POST — Publish Video ─────────────────────────────
