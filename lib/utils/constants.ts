@@ -197,7 +197,6 @@ export const VOICES: {
     { id: 'Ivy', name: 'Ivy', gender: 'Female', accent: 'American', tags: ['Crisp', 'Energetic'], language: 'English', unrealId: 'Ivy' },
     { id: 'Kaitlyn', name: 'Kaitlyn', gender: 'Female', accent: 'American', tags: ['Soft', 'Relaxing'], language: 'English', unrealId: 'Kaitlyn' },
     { id: 'Luna', name: 'Luna', gender: 'Female', accent: 'American', tags: ['Dreamy', 'Gentle'], language: 'English', unrealId: 'Luna' },
-    { id: 'Willow', name: 'Willow', gender: 'Female', accent: 'American', tags: ['Smooth', 'Elegant'], language: 'English', unrealId: 'Willow' },
     { id: 'Lauren', name: 'Lauren', gender: 'Female', accent: 'American', tags: ['Authoritative', 'Bold'], language: 'English', unrealId: 'Lauren' },
     { id: 'Sierra', name: 'Sierra', gender: 'Female', accent: 'American', tags: ['Natural', 'Casual'], language: 'English', unrealId: 'Sierra' },
     // ── American Male ──────────────────────────────────
@@ -205,13 +204,10 @@ export const VOICES: {
     { id: 'Jasper', name: 'Jasper', gender: 'Male', accent: 'American', tags: ['Warm', 'Engaging'], language: 'English', unrealId: 'Jasper' },
     { id: 'Caleb', name: 'Caleb', gender: 'Male', accent: 'American', tags: ['Energetic', 'Youthful'], language: 'English', unrealId: 'Caleb' },
     { id: 'Ronan', name: 'Ronan', gender: 'Male', accent: 'American', tags: ['Dramatic', 'Narrative'], language: 'English', unrealId: 'Ronan' },
-    { id: 'Ethan', name: 'Ethan', gender: 'Male', accent: 'American', tags: ['Confident', 'Clear'], language: 'English', unrealId: 'Ethan' },
-    { id: 'Daniel', name: 'Daniel', gender: 'Male', accent: 'American', tags: ['Formal', 'Professional'], language: 'English', unrealId: 'Daniel' },
     { id: 'Zane', name: 'Zane', gender: 'Male', accent: 'American', tags: ['Cool', 'Modern'], language: 'English', unrealId: 'Zane' },
     // ── French Female ──────────────────────────────────
     { id: 'Élodie', name: 'Élodie', gender: 'Female', accent: 'French', tags: ['Elegant', 'Refined'], language: 'French', unrealId: 'Élodie' },
     // ── Spanish ────────────────────────────────────────
-    { id: 'Lucía', name: 'Lucía', gender: 'Female', accent: 'Spanish', tags: ['Warm', 'Articulate'], language: 'Spanish', unrealId: 'Lucía' },
     { id: 'Mateo', name: 'Mateo', gender: 'Male', accent: 'Spanish', tags: ['Deep', 'Natural'], language: 'Spanish', unrealId: 'Mateo' },
     { id: 'Javier', name: 'Javier', gender: 'Male', accent: 'Spanish', tags: ['Smooth', 'Clear'], language: 'Spanish', unrealId: 'Javier' },
     // ── Portuguese ─────────────────────────────────────
