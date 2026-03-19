@@ -73,7 +73,7 @@ function ScheduleGrid({
     const updated = { ...schedule }
     const slots = [...updated[day]]
     if (slots.length >= 3) return
-    slots.push({ time: '12:00', platform: 'tiktok', enabled: true })
+    slots.push({ time: '12:00', platform: 'x', enabled: true })
     updated[day] = slots
     onScheduleChange(updated)
   }

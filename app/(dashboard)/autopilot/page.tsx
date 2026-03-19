@@ -41,11 +41,11 @@ const STYLE_GRADIENTS: Record<string, string> = {
 }
 
 const DEFAULT_SCHEDULE: WeeklySchedule = {
-  monday:    [{ time: '09:00', platform: 'tiktok',    enabled: true }],
-  tuesday:   [{ time: '12:00', platform: 'instagram', enabled: true }],
-  wednesday: [{ time: '09:00', platform: 'tiktok',    enabled: true }],
-  thursday:  [{ time: '18:00', platform: 'youtube',   enabled: true }],
-  friday:    [{ time: '09:00', platform: 'tiktok',    enabled: true }],
+  monday:    [{ time: '09:00', platform: 'x', enabled: true }],
+  tuesday:   [{ time: '12:00', platform: 'x', enabled: true }],
+  wednesday: [{ time: '09:00', platform: 'x', enabled: true }],
+  thursday:  [{ time: '18:00', platform: 'x', enabled: true }],
+  friday:    [{ time: '09:00', platform: 'x', enabled: true }],
   saturday:  [],
   sunday:    [],
 }

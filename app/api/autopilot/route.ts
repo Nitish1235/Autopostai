@@ -55,13 +55,13 @@ export async function GET(req: Request) {
         data: {
           userId: userId,
           schedule: {
-            monday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
-            tuesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
-            wednesday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
-            thursday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
-            friday: [{ time: '18:00', platform: 'tiktok', enabled: true }],
-            saturday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
-            sunday: [{ time: '12:00', platform: 'tiktok', enabled: true }],
+            monday: [{ time: '18:00', platform: 'x', enabled: true }],
+            tuesday: [{ time: '18:00', platform: 'x', enabled: true }],
+            wednesday: [{ time: '18:00', platform: 'x', enabled: true }],
+            thursday: [{ time: '18:00', platform: 'x', enabled: true }],
+            friday: [{ time: '18:00', platform: 'x', enabled: true }],
+            saturday: [{ time: '12:00', platform: 'x', enabled: true }],
+            sunday: [{ time: '12:00', platform: 'x', enabled: true }],
           },
         },
       })
