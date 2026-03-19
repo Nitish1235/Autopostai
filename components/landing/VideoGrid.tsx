@@ -4,11 +4,12 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
 
 interface GridVideo {
-  id: number
+  id: number | string
   title: string
   niche: string
   gradient: string
   thumbnail?: string
+  thumbnailUrl?: string | null
 }
 
 const SAMPLE_VIDEOS: GridVideo[] = [
@@ -20,7 +21,24 @@ const SAMPLE_VIDEOS: GridVideo[] = [
   { id: 6, title: 'Dark Psychology Secrets', niche: 'Psychology', gradient: 'from-gray-600/40 to-zinc-800/40' },
 ]
 
+import { useState, useEffect } from 'react'
+
 function VideoGrid() {
+  const [dbVideos, setDbVideos] = useState<GridVideo[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/videos?public=true&section=grid')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data?.length > 0) {
+          setDbVideos(data.data)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const displayVideos = dbVideos.length > 0 ? dbVideos : SAMPLE_VIDEOS
+
   return (
     <section className="py-20">
       <div className="max-w-[1200px] mx-auto px-6">
@@ -40,7 +58,7 @@ function VideoGrid() {
         </motion.div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {SAMPLE_VIDEOS.map((video, i) => (
+          {displayVideos.map((video, i) => (
             <motion.div
               key={video.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -56,9 +74,9 @@ function VideoGrid() {
                   'group-hover:scale-[1.02] transition-transform duration-300'
                 )}
               >
-                {video.thumbnail ? (
+                {(video.thumbnail || video.thumbnailUrl) ? (
                   <img
-                    src={video.thumbnail}
+                    src={video.thumbnailUrl || video.thumbnail || ''}
                     alt={video.title}
                     className="w-full h-full object-cover"
                   />

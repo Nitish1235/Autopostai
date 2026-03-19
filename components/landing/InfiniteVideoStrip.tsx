@@ -4,10 +4,11 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
 
 interface VideoItem {
-  id: number
+  id: number | string
   title: string
   gradient: string
   thumbnail?: string
+  thumbnailUrl?: string | null
 }
 
 const VIDEOS: VideoItem[] = [
@@ -31,9 +32,9 @@ function VideoCard({ video }: { video: VideoItem }) {
           video.gradient
         )}
       >
-        {video.thumbnail ? (
+        {(video.thumbnail || video.thumbnailUrl) ? (
           <img
-            src={video.thumbnail}
+            src={video.thumbnailUrl || video.thumbnail || ''}
             alt={video.title}
             className="w-full h-full object-cover"
           />
@@ -49,9 +50,26 @@ function VideoCard({ video }: { video: VideoItem }) {
   )
 }
 
+import { useState, useEffect } from 'react'
+
 function InfiniteVideoStrip() {
+  const [dbVideos, setDbVideos] = useState<VideoItem[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/videos?public=true&section=strip')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data?.length > 0) {
+          setDbVideos(data.data)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const displayVideos = dbVideos.length > 0 ? dbVideos : VIDEOS
+
   // Duplicate for seamless loop
-  const items = [...VIDEOS, ...VIDEOS, ...VIDEOS]
+  const items = [...displayVideos, ...displayVideos, ...displayVideos]
 
   return (
     <section className="py-12 overflow-hidden">

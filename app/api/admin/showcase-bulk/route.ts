@@ -12,6 +12,7 @@ const bulkSchema = z.object({
   skipAudio: z.boolean().default(false),
   imageStyle: z.string().default('cinematic'),
   niche: z.string().default('General'),
+  section: z.string().default('carousel'),
 })
 
 export async function POST(req: Request) {
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 })
     }
 
-    const { topics, generationMode, skipAudio, imageStyle, niche } = parsed.data
+    const { topics, generationMode, skipAudio, imageStyle, niche, section } = parsed.data
 
     let enqueuedCount = 0
 
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
           imageStyle,
           generationMode,
           isShowcase: true,
+          adminSection: section,
           skipAudio: skipAudio,
           status: 'pending',
           aiAudioMode: skipAudio ? 'keep_ai' : 'replace',

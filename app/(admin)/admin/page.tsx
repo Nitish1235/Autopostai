@@ -27,6 +27,7 @@ import {
 
 interface ShowcaseVideo {
     id: string
+    section?: string
     title: string
     niche: string
     views: string
@@ -183,7 +184,7 @@ function SectionInfo({ title, location, format, description }: {
 function VideoManager() {
     const [videos, setVideos] = useState<ShowcaseVideo[]>([])
     const [loading, setLoading] = useState(true)
-    const [showForm, setShowForm] = useState(false)
+    const [activeFormSection, setActiveFormSection] = useState<string | null>(null)
     const [formData, setFormData] = useState({
         title: '',
         niche: '',
@@ -207,7 +208,7 @@ function VideoManager() {
         fetchVideos()
     }, [fetchVideos])
 
-    const handleAdd = async () => {
+    const handleAdd = async (sectionToSave: string) => {
         if (!formData.title || !formData.niche) return
         setUploading(true)
 
@@ -228,13 +229,14 @@ function VideoManager() {
                 ...formData,
                 videoUrl,
                 thumbnailUrl,
+                section: sectionToSave,
             }),
         })
 
         setFormData({ title: '', niche: '', views: '0', likes: '0', gradient: GRADIENTS[0] })
         setVideoFile(null)
         setThumbFile(null)
-        setShowForm(false)
+        setActiveFormSection(null)
         setUploading(false)
         fetchVideos()
     }
@@ -248,6 +250,156 @@ function VideoManager() {
         fetchVideos()
     }
 
+    const renderForm = (sectionId: string) => (
+        <div className="mb-6 p-5 rounded-xl bg-[#12121a] border border-[#1e1e2e]">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">Title *</label>
+                    <input
+                        value={formData.title}
+                        onChange={(e) =>
+                            setFormData({ ...formData, title: e.target.value })
+                        }
+                        className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                        placeholder="e.g. How Einstein Changed Physics Forever"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">Niche *</label>
+                    <input
+                        value={formData.niche}
+                        onChange={(e) =>
+                            setFormData({ ...formData, niche: e.target.value })
+                        }
+                        className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                        placeholder="e.g. Finance, Technology, History"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">Views (display text)</label>
+                    <input
+                        value={formData.views}
+                        onChange={(e) =>
+                            setFormData({ ...formData, views: e.target.value })
+                        }
+                        className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                        placeholder="e.g. 2.4M"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">Likes (display text)</label>
+                    <input
+                        value={formData.likes}
+                        onChange={(e) =>
+                            setFormData({ ...formData, likes: e.target.value })
+                        }
+                        className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                        placeholder="e.g. 180K"
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">
+                        Video File (.mp4) — optional
+                    </label>
+                    <label className="flex items-center gap-2 h-10 px-3 rounded-lg bg-[#0d0d14] border border-dashed border-[#1e1e2e] text-[#666] text-sm cursor-pointer hover:border-violet-500/30 transition-colors">
+                        <Upload size={14} />
+                        {videoFile ? videoFile.name : 'Choose file...'}
+                        <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
+                <div>
+                    <label className="block text-xs text-[#888] mb-1">
+                        Thumbnail (.jpg/.png) — 9:16 portrait
+                    </label>
+                    <label className="flex items-center gap-2 h-10 px-3 rounded-lg bg-[#0d0d14] border border-dashed border-[#1e1e2e] text-[#666] text-sm cursor-pointer hover:border-violet-500/30 transition-colors">
+                        <Upload size={14} />
+                        {thumbFile ? thumbFile.name : 'Choose file...'}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
+            </div>
+
+            {/* Gradient picker */}
+            <div className="mb-4">
+                <label className="block text-xs text-[#888] mb-1.5">
+                    Gradient (fallback if no thumbnail)
+                </label>
+                <div className="flex gap-2">
+                    {GRADIENTS.map((g) => (
+                        <button
+                            key={g}
+                            onClick={() => setFormData({ ...formData, gradient: g })}
+                            className={`w-8 h-8 rounded-lg bg-gradient-to-br ${g} ${formData.gradient === g
+                                ? 'ring-2 ring-violet-400 ring-offset-2 ring-offset-[#12121a]'
+                                : ''
+                                } cursor-pointer transition-all`}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex gap-2">
+                <button
+                    onClick={() => handleAdd(sectionId)}
+                    disabled={uploading || !formData.title || !formData.niche}
+                    className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-40 cursor-pointer transition-colors"
+                >
+                    {uploading ? 'Uploading...' : 'Save Video to ' + sectionId}
+                </button>
+                <button
+                    onClick={() => setActiveFormSection(null)}
+                    className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-[#888] text-sm hover:text-white cursor-pointer transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    )
+
+    const renderList = (sectionId: string) => {
+        const sectionVideos = videos.filter(v => v.section === sectionId || (!v.section && sectionId === 'carousel'))
+        if (loading) {
+             return <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" /></div>
+        }
+        if (sectionVideos.length === 0) {
+             return <div className="text-center py-8 text-[#555] text-sm bg-[#12121a] rounded-xl border border-dashed border-[#1e1e2e]">No videos in this section yet. Use the Autopilot Generator or add manually.</div>
+        }
+        return (
+            <div className="space-y-2">
+                {sectionVideos.map((v, i) => (
+                    <div key={v.id} className="flex items-center gap-4 p-4 rounded-xl bg-[#12121a] border border-[#1e1e2e] hover:border-[#2a2a3e] transition-colors">
+                        <div className={`w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br ${v.gradient}`}>
+                            {v.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{v.title}</p>
+                            <p className="text-xs text-[#666] mt-0.5">{v.niche} · {v.views} views · {v.likes} likes</p>
+                        </div>
+                        <span className="text-[10px] text-[#555] font-mono">#{i + 1}</span>
+                        <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"><Trash2 size={14} /></button>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
+    const carouselVideos = videos.filter(v => v.section === 'carousel' || !v.section)
+    const stripVideos = videos.filter(v => v.section === 'strip')
+    const gridVideos = videos.filter(v => v.section === 'grid')
+
     return (
         <div className="space-y-10">
             {/* ── OVERVIEW BANNER ─────────────────────────── */}
@@ -257,29 +409,29 @@ function VideoManager() {
                     Landing Page Videos
                 </h2>
                 <p className="text-xs text-[#888] leading-relaxed mb-4">
-                    Your landing page has <strong className="text-white">3 distinct video showcase sections</strong>.
-                    Each section displays videos differently. Upload content tailored to each section below.
+                    Your landing page has <strong className="text-white">3 distinct showcase sections</strong>.
+                    You can add placeholder videos here manually, or use the <strong>Showcase Autopilot</strong> (next tab) to bulk-generate real AI videos straight into these sections!
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                     <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e]">
                         <Layers size={14} className="text-emerald-400 mt-0.5 flex-shrink-0" />
                         <div>
                             <p className="text-xs font-semibold text-white">① Showcase Carousel</p>
-                            <p className="text-[10px] text-[#666] mt-0.5">&quot;Real results from real creators&quot; — swipeable cards with stats</p>
+                            <p className="text-[10px] text-[#666] mt-0.5">Desktop swipe cards (Needs 4-5 items)</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e]">
                         <GalleryHorizontalEnd size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
                         <div>
                             <p className="text-xs font-semibold text-white">② Infinite Video Strip</p>
-                            <p className="text-[10px] text-[#666] mt-0.5">Auto-scrolling rows of thumbnails below the hero</p>
+                            <p className="text-[10px] text-[#666] mt-0.5">Auto-scrolling rows (Needs 8+ items)</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e]">
                         <LayoutGrid size={14} className="text-orange-400 mt-0.5 flex-shrink-0" />
                         <div>
                             <p className="text-xs font-semibold text-white">③ Video Grid</p>
-                            <p className="text-[10px] text-[#666] mt-0.5">&quot;See what creators are building&quot; — 6-column grid with hover</p>
+                            <p className="text-[10px] text-[#666] mt-0.5">6-column hover grid (Needs 6 items)</p>
                         </div>
                     </div>
                 </div>
@@ -291,14 +443,14 @@ function VideoManager() {
                     title="① Showcase Carousel — &quot;Real results from real creators&quot;"
                     location="Landing Page → Below Features Section"
                     format="9:16 portrait thumbnail (.jpg/.png) + optional .mp4 video"
-                    description="These appear as swipeable phone-mockup cards with title, niche, view count, and like count. Upload a thumbnail image and optionally a video. Users can navigate with arrows."
+                    description="Swipeable phone-mockup cards. Requirement: At least 4-5 videos are recommended to make the carousel function smoothly."
                 />
 
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                         <Layers size={14} className="text-emerald-400" />
-                        Showcase Carousel Videos
-                        <span className="text-[10px] text-[#555] font-normal ml-1">({videos.length} uploaded)</span>
+                        Carousel Videos
+                        <span className="text-[10px] text-[#555] font-normal ml-1">({carouselVideos.length} uploaded)</span>
                     </h3>
                     <div className="flex gap-2">
                         <button
@@ -308,186 +460,15 @@ function VideoManager() {
                             <RefreshCw size={13} />
                         </button>
                         <button
-                            onClick={() => setShowForm(!showForm)}
+                            onClick={() => setActiveFormSection(activeFormSection === 'carousel' ? null : 'carousel')}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-500 transition-colors cursor-pointer"
                         >
-                            <Plus size={13} />
-                            Add Video
+                            <Plus size={13} /> Add Video
                         </button>
                     </div>
                 </div>
-
-                {/* Add form */}
-                {showForm && (
-                    <div className="mb-6 p-5 rounded-xl bg-[#12121a] border border-[#1e1e2e]">
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">Title *</label>
-                                <input
-                                    value={formData.title}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, title: e.target.value })
-                                    }
-                                    className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
-                                    placeholder="e.g. How Einstein Changed Physics Forever"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">Niche *</label>
-                                <input
-                                    value={formData.niche}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, niche: e.target.value })
-                                    }
-                                    className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
-                                    placeholder="e.g. Finance, Technology, History"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">Views (display text)</label>
-                                <input
-                                    value={formData.views}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, views: e.target.value })
-                                    }
-                                    className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
-                                    placeholder="e.g. 2.4M"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">Likes (display text)</label>
-                                <input
-                                    value={formData.likes}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, likes: e.target.value })
-                                    }
-                                    className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
-                                    placeholder="e.g. 180K"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">
-                                    Video File (.mp4) — optional
-                                </label>
-                                <label className="flex items-center gap-2 h-10 px-3 rounded-lg bg-[#0d0d14] border border-dashed border-[#1e1e2e] text-[#666] text-sm cursor-pointer hover:border-violet-500/30 transition-colors">
-                                    <Upload size={14} />
-                                    {videoFile ? videoFile.name : 'Choose file...'}
-                                    <input
-                                        type="file"
-                                        accept="video/*"
-                                        onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
-                                        className="hidden"
-                                    />
-                                </label>
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#888] mb-1">
-                                    Thumbnail (.jpg/.png) — 9:16 portrait
-                                </label>
-                                <label className="flex items-center gap-2 h-10 px-3 rounded-lg bg-[#0d0d14] border border-dashed border-[#1e1e2e] text-[#666] text-sm cursor-pointer hover:border-violet-500/30 transition-colors">
-                                    <Upload size={14} />
-                                    {thumbFile ? thumbFile.name : 'Choose file...'}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
-                                        className="hidden"
-                                    />
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Gradient picker */}
-                        <div className="mb-4">
-                            <label className="block text-xs text-[#888] mb-1.5">
-                                Gradient (fallback if no thumbnail)
-                            </label>
-                            <div className="flex gap-2">
-                                {GRADIENTS.map((g) => (
-                                    <button
-                                        key={g}
-                                        onClick={() => setFormData({ ...formData, gradient: g })}
-                                        className={`w-8 h-8 rounded-lg bg-gradient-to-br ${g} ${formData.gradient === g
-                                            ? 'ring-2 ring-violet-400 ring-offset-2 ring-offset-[#12121a]'
-                                            : ''
-                                            } cursor-pointer transition-all`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleAdd}
-                                disabled={uploading || !formData.title || !formData.niche}
-                                className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-40 cursor-pointer transition-colors"
-                            >
-                                {uploading ? 'Uploading...' : 'Save Video'}
-                            </button>
-                            <button
-                                onClick={() => setShowForm(false)}
-                                className="px-4 py-2 rounded-lg bg-[#1a1a2e] text-[#888] text-sm hover:text-white cursor-pointer transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Video list */}
-                {loading ? (
-                    <div className="flex justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-                    </div>
-                ) : videos.length === 0 ? (
-                    <div className="text-center py-8 text-[#555] text-sm bg-[#12121a] rounded-xl border border-dashed border-[#1e1e2e]">
-                        No showcase videos yet. Click &quot;Add Video&quot; to get started.
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {videos.map((v, i) => (
-                            <div
-                                key={v.id}
-                                className="flex items-center gap-4 p-4 rounded-xl bg-[#12121a] border border-[#1e1e2e] hover:border-[#2a2a3e] transition-colors"
-                            >
-                                <div
-                                    className={`w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br ${v.gradient}`}
-                                >
-                                    {v.thumbnailUrl && (
-                                        <img
-                                            src={v.thumbnailUrl}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-white truncate">
-                                        {v.title}
-                                    </p>
-                                    <p className="text-xs text-[#666] mt-0.5">
-                                        {v.niche} · {v.views} views · {v.likes} likes
-                                    </p>
-                                </div>
-
-                                <span className="text-[10px] text-[#555] font-mono">
-                                    #{i + 1}
-                                </span>
-
-                                <button
-                                    onClick={() => handleDelete(v.id)}
-                                    className="p-2 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {activeFormSection === 'carousel' && renderForm('carousel')}
+                {renderList('carousel')}
             </div>
 
             {/* ── SECTION 2: INFINITE VIDEO STRIP ─────────── */}
@@ -496,18 +477,31 @@ function VideoManager() {
                     title="② Infinite Video Strip — Auto-scrolling showcase"
                     location="Landing Page → Below Hero Section"
                     format="9:16 portrait thumbnails (.jpg/.png), ~140px wide cards"
-                    description="Two auto-scrolling rows of small video thumbnails. Currently uses hardcoded gradients with text labels. Upload thumbnail images here to replace them with real video previews. These scroll infinitely in opposite directions."
+                    description="Two auto-scrolling rows of small video thumbnails. Requirement: At least 8 videos are recommended so the rows can duplicate smoothly for an endless scrolling effect."
                 />
-                <div className="p-6 rounded-xl bg-[#12121a] border border-dashed border-[#1e1e2e] text-center">
-                    <GalleryHorizontalEnd size={24} className="text-blue-400/40 mx-auto mb-2" />
-                    <p className="text-sm text-[#666]">
-                        The Infinite Video Strip currently uses hardcoded data.
-                    </p>
-                    <p className="text-xs text-[#444] mt-1">
-                        To make it dynamic, the same videos from the Showcase Carousel above <br />
-                        can be reused here. Upload enough carousel videos and they will populate both sections.
-                    </p>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <GalleryHorizontalEnd size={14} className="text-blue-400" />
+                        Infinite Strip Videos
+                        <span className="text-[10px] text-[#555] font-normal ml-1">({stripVideos.length} uploaded)</span>
+                    </h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={fetchVideos}
+                            className="p-2 rounded-lg bg-[#12121a] border border-[#1e1e2e] text-[#888] hover:text-white transition-colors cursor-pointer"
+                        >
+                            <RefreshCw size={13} />
+                        </button>
+                        <button
+                            onClick={() => setActiveFormSection(activeFormSection === 'strip' ? null : 'strip')}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-500 transition-colors cursor-pointer"
+                        >
+                            <Plus size={13} /> Add Video
+                        </button>
+                    </div>
                 </div>
+                {activeFormSection === 'strip' && renderForm('strip')}
+                {renderList('strip')}
             </div>
 
             {/* ── SECTION 3: VIDEO GRID ───────────────────── */}
@@ -516,17 +510,31 @@ function VideoManager() {
                     title="③ Video Grid — &quot;See what creators are building&quot;"
                     location="Landing Page → Below Showcase Carousel"
                     format="9:16 portrait thumbnails (.jpg/.png), shown in a 6-column grid"
-                    description="A 6-video grid displaying titles and niches. Currently uses hardcoded data with gradient placeholders. Upload thumbnail images to replace them. These display a hover play button and bottom-overlay niche/title labels."
+                    description="A 6-video grid displaying titles and niches. Requirement: Exactly 6 videos are needed to completely fill the 6-column display row."
                 />
-                <div className="p-6 rounded-xl bg-[#12121a] border border-dashed border-[#1e1e2e] text-center">
-                    <LayoutGrid size={24} className="text-orange-400/40 mx-auto mb-2" />
-                    <p className="text-sm text-[#666]">
-                        The Video Grid currently uses hardcoded sample data.
-                    </p>
-                    <p className="text-xs text-[#444] mt-1">
-                        Upload enough Showcase Carousel videos above and they will auto-populate here as well.
-                    </p>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <LayoutGrid size={14} className="text-orange-400" />
+                        Video Grid Videos
+                        <span className="text-[10px] text-[#555] font-normal ml-1">({gridVideos.length} uploaded)</span>
+                    </h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={fetchVideos}
+                            className="p-2 rounded-lg bg-[#12121a] border border-[#1e1e2e] text-[#888] hover:text-white transition-colors cursor-pointer"
+                        >
+                            <RefreshCw size={13} />
+                        </button>
+                        <button
+                            onClick={() => setActiveFormSection(activeFormSection === 'grid' ? null : 'grid')}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-500 transition-colors cursor-pointer"
+                        >
+                            <Plus size={13} /> Add Video
+                        </button>
+                    </div>
                 </div>
+                {activeFormSection === 'grid' && renderForm('grid')}
+                {renderList('grid')}
             </div>
         </div>
     )

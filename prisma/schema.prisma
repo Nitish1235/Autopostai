@@ -104,6 +104,7 @@ model Video {
   // Admin / Showcase
   isShowcase    Boolean   @default(false)
   skipAudio     Boolean   @default(false)
+  adminSection  String?   // carousel | strip | grid
 
   // Generated content
   script      Json?       // ScriptSegment[]
@@ -353,6 +354,7 @@ enum VideoStatus {
 // ── ADMIN: SHOWCASE VIDEOS ───────────────────────────
 model AdminShowcaseVideo {
   id          String    @id @default(cuid())
+  section     String    @default("carousel") // carousel | strip | grid
   title       String
   niche       String
   views       String    @default("0")

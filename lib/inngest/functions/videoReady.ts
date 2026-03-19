@@ -24,6 +24,7 @@ export const onVideoReady = inngest.createFunction(
           platforms: true,
           videoUrl: true,
           isShowcase: true,
+          adminSection: true,
           niche: true,
         },
       })
@@ -67,6 +68,7 @@ export const onVideoReady = inngest.createFunction(
       if (video.isShowcase && video.videoUrl) {
         await prisma.adminShowcaseVideo.create({
           data: {
+            section: video.adminSection ?? 'carousel',
             title: video.title,
             niche: video.niche ?? 'general',
             videoUrl: video.videoUrl,

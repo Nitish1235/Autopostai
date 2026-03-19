@@ -65,7 +65,7 @@ function VideoCarousel() {
   const [videos, setVideos] = useState<CarouselVideo[]>(FALLBACK_SHOWCASE)
 
   useEffect(() => {
-    fetch('/api/admin/videos?public=true')
+    fetch('/api/admin/videos?public=true&section=carousel')
       .then((r) => r.json())
       .then((data) => {
         if (data.success && data.data?.length > 0) {

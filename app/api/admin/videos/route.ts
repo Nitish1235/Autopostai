@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db/prisma'
 export async function GET(req: NextRequest) {
     try {
         const isPublic = req.nextUrl.searchParams.get('public') === 'true'
+        const section = req.nextUrl.searchParams.get('section')
 
         if (!isPublic) {
             const isAdmin = await isAdminAuthenticated()
@@ -18,8 +19,12 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        const whereClause: any = {}
+        if (isPublic) whereClause.active = true
+        if (section) whereClause.section = section
+
         const videos = await prisma.adminShowcaseVideo.findMany({
-            where: isPublic ? { active: true } : {},
+            where: whereClause,
             orderBy: { order: 'asc' },
         })
 
@@ -46,7 +51,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { title, niche, views, likes, videoUrl, thumbnailUrl, gradient } = body
+        const { title, niche, views, likes, videoUrl, thumbnailUrl, gradient, section } = body
 
         if (!title || !niche) {
             return NextResponse.json(
@@ -63,6 +68,7 @@ export async function POST(req: NextRequest) {
 
         const video = await prisma.adminShowcaseVideo.create({
             data: {
+                section: section ?? 'carousel',
                 title,
                 niche,
                 views: views ?? '0',

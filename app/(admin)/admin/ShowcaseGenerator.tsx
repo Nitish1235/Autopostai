@@ -28,6 +28,7 @@ export function ShowcaseGenerator() {
   const [skipAudio, setSkipAudio] = useState(false)
   const [imageStyle, setImageStyle] = useState('cinematic')
   const [niche, setNiche] = useState('General')
+  const [section, setSection] = useState('carousel') // carousel | strip | grid
   
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -54,7 +55,8 @@ export function ShowcaseGenerator() {
           generationMode,
           skipAudio,
           imageStyle,
-          niche
+          niche,
+          section
         })
       })
 
@@ -126,6 +128,20 @@ export function ShowcaseGenerator() {
                   className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none"
                   placeholder="e.g. Technology"
                 />
+              </div>
+
+              {/* Target Section */}
+              <div>
+                <label className="block text-xs text-[#888] mb-1.5">Target Section</label>
+                <select
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg bg-[#0d0d14] border border-[#1e1e2e] text-white text-sm focus:border-violet-500/50 focus:outline-none cursor-pointer"
+                >
+                  <option value="carousel">Carousel (Desktop size)</option>
+                  <option value="strip">Infinite Strip (Small cards)</option>
+                  <option value="grid">Video Grid (6-column row)</option>
+                </select>
               </div>
 
               {/* Engine */}

@@ -83,6 +83,7 @@ export default function AutopilotPage() {
   const [aiOptimize,     setAiOptimize]     = useState(false)
   const [topics,         setTopics]         = useState<TopicQueueType[]>([])
   const [nextRunAt,      setNextRunAt]      = useState<string | null>(null)
+  const [stylePreviews,  setStylePreviews]  = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function fetchConfig() {
@@ -120,6 +121,18 @@ export default function AutopilotPage() {
           const topicsData = await topicsRes.json()
           if (topicsData.success && Array.isArray(topicsData.data?.topics)) {
             setTopics(topicsData.data.topics)
+          }
+        }
+
+        const stylesRes = await fetch('/api/admin/styles?public=true')
+        if (stylesRes.ok) {
+          const stylesData = await stylesRes.json()
+          if (stylesData.success && stylesData.data) {
+            const map: Record<string, string> = {}
+            stylesData.data.forEach((p: { styleId: string; imageUrl: string }) => {
+                map[p.styleId] = p.imageUrl
+            })
+            setStylePreviews(map)
           }
         }
       } catch {
@@ -394,23 +407,33 @@ export default function AutopilotPage() {
                   {generationMode === 'image_stack' ? 'Image Style' : 'AI Video Style'}
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {IMAGE_STYLES.slice(0, 4).map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setImageStyle(s.id)}
-                      className={cn(
-                        'aspect-square rounded-[8px] overflow-hidden relative cursor-pointer transition-all',
-                        imageStyle === s.id
-                          ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-primary)]'
-                          : 'hover:scale-105'
-                      )}
-                    >
-                      <div className="absolute inset-0" style={{ background: STYLE_GRADIENTS[s.id] }} />
-                      <span className="absolute bottom-1 left-1 text-[8px] text-white font-medium">
-                        {s.label.split(' ')[0]}
-                      </span>
-                    </button>
-                  ))}
+                  {IMAGE_STYLES.slice(0, 4).map((s) => {
+                    const previewImage = stylePreviews[s.id]
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setImageStyle(s.id)}
+                        className={cn(
+                          'aspect-square rounded-[8px] overflow-hidden relative cursor-pointer transition-all',
+                          imageStyle === s.id
+                            ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-primary)]'
+                            : 'hover:scale-105'
+                        )}
+                      >
+                        <div className="absolute inset-0" style={{ background: STYLE_GRADIENTS[s.id] }} />
+                        {previewImage && (
+                          <img
+                            src={previewImage}
+                            alt={s.label}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        )}
+                        <span className="absolute bottom-1 left-1 text-[8px] text-white font-medium z-10 drop-shadow-md">
+                          {s.label.split(' ')[0]}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
