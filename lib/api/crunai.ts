@@ -115,9 +115,8 @@ export async function generateVideo(params: {
             model: CRUN_AI_MODELS.sora2,
             input: {
                 prompt: params.prompt,
-                aspect_ratio: 'portrait',
+                aspect_ratio: '9:16',
                 duration,
-                remove_watermark: false,
             },
         },
         {
