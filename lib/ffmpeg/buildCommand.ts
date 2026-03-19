@@ -149,13 +149,24 @@ export async function renderVideo(params: {
     // Get music path
     let musicPath: string
     try {
-      if (musicMood.startsWith('http://') || musicMood.startsWith('https://')) {
-        musicPath = path.join(workDir, 'bg_music.mp3')
-        const res = await axios.get(musicMood, { responseType: 'arraybuffer', timeout: 30000 })
-        fs.writeFileSync(musicPath, Buffer.from(res.data))
-      } else {
-        musicPath = getMusicPath(musicMood, videoId)
+      let finalMusicUrl = musicMood
+      if (!finalMusicUrl.startsWith('http')) {
+        const tracks = await prisma.adminMusicTrack.findMany({
+          where: { mood: musicMood, active: true }
+        })
+        if (tracks.length > 0) {
+          const index = videoId.charCodeAt(0) % tracks.length
+          finalMusicUrl = tracks[index].fileUrl
+        } else {
+          const anyTracks = await prisma.adminMusicTrack.findMany({ where: { active: true } })
+          if (anyTracks.length > 0) finalMusicUrl = anyTracks[0].fileUrl
+          else throw new Error('No admin music tracks found in database')
+        }
       }
+
+      musicPath = path.join(workDir, 'bg_music.mp3')
+      const res = await axios.get(finalMusicUrl, { responseType: 'arraybuffer', timeout: 30000 })
+      fs.writeFileSync(musicPath, Buffer.from(res.data))
     } catch (err) {
       console.warn('[render] Failed to load background music:', err)
       // Fallback: create silent audio if no music file
