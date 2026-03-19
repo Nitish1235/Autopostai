@@ -34,7 +34,7 @@ export const PLANS = {
       'Post 1 video/day across all platforms',
       'All 8 AI visual styles',
       'All 48 voice options',
-      '30s / 60s / 90s formats',
+      '15s / 30s / 60s / 90s formats',
       'Smart subtitles',
       'TikTok + Instagram + YouTube + X',
       'Basic analytics',
@@ -406,6 +406,7 @@ export const IMAGE_COUNT: Record<
   VideoFormat,
   { min: number; max: number; default: number }
 > = {
+  '15s': { min: 4, max: 6, default: 5 },
   '30s': { min: 10, max: 12, default: 11 },
   '60s': { min: 18, max: 22, default: 20 },
   '90s': { min: 26, max: 30, default: 28 },

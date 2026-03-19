@@ -14,9 +14,10 @@ interface StepTopicProps {
   onFormatChange: (format: VideoFormat) => void
   niche: string
   onNicheChange: (niche: string) => void
+  isAiVideo?: boolean
 }
-
 const FORMAT_OPTIONS: { id: VideoFormat; label: string }[] = [
+  { id: '15s', label: '15s' },
   { id: '30s', label: '30–40s' },
   { id: '60s', label: '60–90s' },
   { id: '90s', label: '90s+' },
@@ -72,6 +73,7 @@ function StepTopic({
   onFormatChange,
   niche,
   onNicheChange,
+  isAiVideo = false,
 }: StepTopicProps) {
   const [mode, setMode] = useState<'guided' | 'custom'>(
     niche === 'custom' ? 'custom' : 'guided'
@@ -153,7 +155,9 @@ function StepTopic({
       <div className="flex items-center justify-between mt-4 gap-4">
         {/* Format selector */}
         <div className="flex gap-1.5">
-          {FORMAT_OPTIONS.map((opt) => (
+          {FORMAT_OPTIONS.filter(opt =>
+            isAiVideo ? opt.id === '15s' : opt.id !== '15s'
+          ).map((opt) => (
             <button
               key={opt.id}
               onClick={() => onFormatChange(opt.id)}

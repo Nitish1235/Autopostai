@@ -104,21 +104,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Section 2 — Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatsCard
-          label="Total Views"
-          value={loading ? '0' : formatNumber(analytics?.totals?.totalViews ?? 0)}
-          delta={analytics?.deltas?.viewsDelta !== undefined ? `${analytics.deltas.viewsDelta > 0 ? '+' : ''}${formatNumber(analytics.deltas.viewsDelta)}` : undefined}
-          deltaPositive={analytics?.deltas?.viewsDelta !== undefined ? analytics.deltas.viewsDelta >= 0 : undefined}
-          loading={loading}
-        />
-        <StatsCard
-          label="Followers"
-          value={loading ? '0' : formatNumber(analytics?.totals?.totalFollowers ?? 0)}
-          delta={analytics?.deltas?.followersDelta !== undefined ? `+${formatNumber(analytics.deltas.followersDelta)}` : undefined}
-          deltaPositive={true}
-          loading={loading}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatsCard
           label="Videos Posted"
           value={loading ? '0' : String(analytics?.totals?.totalVideos ?? 0)}
@@ -126,15 +112,7 @@ export default function DashboardPage() {
           deltaPositive={true}
           loading={loading}
         />
-        <StatsCard
-          label="Watch Rate"
-          value={loading ? '0%' : `${analytics?.totals?.avgWatchRate ?? 0}%`}
-          delta={analytics?.deltas?.watchRateDelta !== undefined ? `${analytics.deltas.watchRateDelta > 0 ? '+' : ''}${analytics.deltas.watchRateDelta}%` : undefined}
-          deltaPositive={analytics?.deltas?.watchRateDelta !== undefined ? analytics.deltas.watchRateDelta >= 0 : undefined}
-          loading={loading}
-        />
       </div>
-
       {/* Section 3 — Two columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         {/* Recent Videos */}
@@ -185,7 +163,8 @@ export default function DashboardPage() {
 
         {/* Right column */}
         <div className="space-y-4">
-          {/* Platform Performance */}
+          {/* Platform Performance (Hidden as per request) */}
+          {/* 
           <Card padding="md">
             <h2 className="text-[14px] font-semibold text-[var(--text-primary)] mb-4">
               Platform Performance
@@ -237,6 +216,7 @@ export default function DashboardPage() {
               </div>
             )}
           </Card>
+          */}
 
           {/* Autopilot Status */}
           <Card padding="md">

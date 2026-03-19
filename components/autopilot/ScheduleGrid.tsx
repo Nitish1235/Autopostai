@@ -157,7 +157,13 @@ function ScheduleGrid({
                       className="w-full text-[9px] bg-transparent text-[var(--text-secondary)] mt-0.5 focus:outline-none cursor-pointer"
                     >
                       {PLATFORMS.map((p) => (
-                        <option key={p.id} value={p.id}>{p.label}</option>
+                        <option 
+                          key={p.id} 
+                          value={p.id}
+                          className="bg-[#1e1e24] text-white" 
+                        >
+                          {p.label}
+                        </option>
                       ))}
                     </select>
                     <div className="flex items-center justify-between mt-1">

@@ -171,13 +171,23 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
 
         const processingMs = Date.now() - startTime
 
+        // Check if we should set status to ready or scheduled
+        const video = await prisma.video.findUnique({
+            where: { id: videoId },
+            select: { scheduledAt: true }
+        })
+        
+        const nextStatus = (video?.scheduledAt && video.scheduledAt > new Date()) 
+            ? 'scheduled' 
+            : 'ready'
+
         await prisma.video.update({
             where: { id: videoId },
             data: {
                 aiVideoUrl: finalVideoUrl,
                 videoUrl: finalVideoUrl,
                 aiAudioMode: aiAudioMode,
-                status: 'ready',
+                status: nextStatus,
                 processingMs,
             },
         })

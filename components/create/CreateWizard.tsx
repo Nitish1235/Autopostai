@@ -169,6 +169,13 @@ function CreateWizard() {
     }
   }, [videoId]) // Only run if no videoId is currently active
 
+  // Force 15s for AI Video
+  useEffect(() => {
+    if (generationMode === 'ai_video' && format !== '15s') {
+      setFormat('15s')
+    }
+  }, [generationMode, format])
+
   const isAiVideo = generationMode === 'ai_video'
   const steps = isAiVideo ? AI_VIDEO_STEPS : IMAGE_STACK_STEPS
   const previewStepIndex = steps.length - 1
@@ -442,6 +449,7 @@ function CreateWizard() {
             onFormatChange={setFormat}
             niche={niche}
             onNicheChange={setNiche}
+            isAiVideo={isAiVideo}
           />
         )}
         {steps[currentStep]?.id === 'script' && (

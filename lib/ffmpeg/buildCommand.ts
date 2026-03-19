@@ -316,23 +316,31 @@ export async function renderVideo(params: {
 
     const elapsed = Date.now() - startTime
 
+    // Check if we should set status to ready or scheduled
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { scheduledAt: true }
+    })
+    
+    const nextStatus = (video?.scheduledAt && video.scheduledAt > new Date()) 
+      ? 'scheduled' 
+      : 'ready'
+
     await prisma.video.update({
       where: { id: videoId },
       data: {
         videoUrl,
         thumbnailUrl,
-        status: 'ready',
+        status: nextStatus as any,
         processingMs: elapsed,
       },
     })
-
     await prisma.renderJob.update({
       where: { videoId },
       data: {
         status: 'complete',
         progress: 100,
         completedAt: new Date(),
-        durationMs: elapsed,
       },
     })
 

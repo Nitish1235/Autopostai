@@ -132,7 +132,11 @@ function StepVoice({ voiceId, onVoiceChange, voiceSpeed, onSpeedChange }: StepVo
           className="h-[34px] px-3 rounded-[8px] bg-[var(--bg-card)] border border-[var(--border)] text-[12px] text-[var(--text-primary)] cursor-pointer focus:outline-none focus:border-[var(--accent)]"
         >
           {ALL_LANGUAGES.map((lang) => (
-            <option key={lang} value={lang}>
+            <option 
+              key={lang} 
+              value={lang}
+              className="bg-[#1e1e24] text-white"
+            >
               {lang === 'All' ? '🌐 All Languages' : lang}
             </option>
           ))}
