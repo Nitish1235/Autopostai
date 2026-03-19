@@ -109,6 +109,7 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<'videos' | 'music' | 'styles' | 'voices' | 'generator' | 'subtitles'>(
         'videos'
     )
+    const [testingAutopilot, setTestingAutopilot] = useState(false)
 
     return (
         <div className="p-8">
@@ -121,23 +122,35 @@ export default function AdminDashboard() {
                     </p>
                 </div>
                 <button
+                    disabled={testingAutopilot}
                     onClick={async () => {
+                        const confirmRun = confirm('This will run a FULL functional check of the Autopilot logic for nitishjain135@gmail.com, including schedule and limit validation. Proceed?')
+                        if (!confirmRun) return
+
+                        setTestingAutopilot(true)
                         try {
-                            const res = await fetch('/api/admin/trigger-autopilot-test', { method: 'POST' })
+                            const res = await fetch('/api/admin/autopilot/run-test', { method: 'POST' })
                             const data = await res.json()
                             if (data.success) {
-                                alert('Autopilot E2E Test Queued! Check your user Videos tab to watch the generation progress.')
+                                const logSummary = data.logs.join('\n')
+                                alert(`Autopilot Test Finished:\n\n${logSummary}\n\n${data.message || ''}`)
                             } else {
-                                alert('Failed: ' + data.error)
+                                alert('Failed: ' + (data.error || 'Unknown error'))
                             }
                         } catch (err) {
                             alert('Network error')
+                        } finally {
+                            setTestingAutopilot(false)
                         }
                     }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-[13px] font-semibold rounded-[8px] transition-all cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-[8px] transition-all cursor-pointer shadow-lg shadow-indigo-500/20"
                 >
-                    <Wand2 size={16} />
-                    Run E2E Autopilot Test
+                    {testingAutopilot ? (
+                        <RefreshCw size={16} className="animate-spin" />
+                    ) : (
+                        <Wand2 size={16} />
+                    )}
+                    {testingAutopilot ? 'Running Tests...' : 'Functional Autopilot Test'}
                 </button>
             </div>
 

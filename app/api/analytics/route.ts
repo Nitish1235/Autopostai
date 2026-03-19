@@ -221,18 +221,19 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       data: {
-        summary: {
+        totals: {
           totalViews,
           totalLikes,
           totalShares,
           avgWatchRate: Math.round(avgWatchRate * 10) / 10,
-          videosPosted: currentVideos.length,
+          totalVideos: currentVideos.length,
           totalFollowers,
         },
         deltas: {
           views: calcDelta(totalViews, prevViews),
           likes: calcDelta(totalLikes, prevLikes),
           watchRate: calcDelta(avgWatchRate, prevAvgWatchRate),
+          videosDelta: currentVideos.length - previousVideos.length,
           followers: { value: totalFollowers, delta: 0, isPositive: true },
         },
         viewsOverTime,

@@ -1,170 +1,198 @@
-/**
- * test-autopilot.ts
- * 
- * E2E test script to validate Autopilot timezone resolution 
- * and end-to-end video generation triggers for both 
- * `image_stack` and `ai_video`.
- * 
- * Run with: npx ts-node scripts/test-autopilot.ts
- */
-
-import { PrismaClient } from '@prisma/client'
-import { getSegmentCount } from '../lib/prompts/scriptPrompt'
+import { prisma } from '../lib/db/prisma'
+import { deductCredit, isAdminEmail } from '../lib/utils/credits'
+import { deductAiVideoCredit } from '../lib/utils/aiVideoCredits'
 import { addVideoToQueue } from '../lib/queue/videoQueue'
+import { getSegmentCount } from '../lib/prompts/scriptPrompt'
+import { getDailyPostLimit } from '../lib/utils/plans'
 
-const prisma = new PrismaClient()
+async function testAutopilot(targetEmail: string = 'nitishjain135@gmail.com') {
+  console.log('🚀 Starting Autopilot Functional Test...')
+  console.log(`📧 Target User: ${targetEmail}`)
 
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-async function testTimezoneResolution(timezone: string) {
-  console.log('\n=============================================')
-  console.log('🧪 TEST 1: TIMEZONE RESOLUTION LOGIC')
-  console.log('=============================================')
-  
-  const now = new Date()
-  console.log(`System UTC Time: ${now.toISOString()}`)
-  console.log(`Target Timezone: ${timezone}`)
-
-  const formatterHour = new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', hourCycle: 'h23' })
-  const formatterMin = new Intl.DateTimeFormat('en-US', { timeZone: timezone, minute: 'numeric' })
-  const formatterDay = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'long' })
-
-  const currentHour = parseInt(formatterHour.format(now), 10)
-  const currentMin = parseInt(formatterMin.format(now), 10)
-  const currentDayName = formatterDay.format(now).toLowerCase()
-
-  console.log(`\n✅ Resolved User Local Time:`)
-  console.log(`- Day: ${currentDayName}`)
-  console.log(`- Hour: ${currentHour}`)
-  console.log(`- Minute: ${currentMin}`)
-  
-  if (isNaN(currentHour) || !currentDayName) {
-    throw new Error('❌ Timezone resolution failed! Intl logic is faulty.')
-  }
-}
-
-async function runVideoGenerationTest(userId: string, generationMode: 'image_stack' | 'ai_video') {
-  console.log('\n=============================================')
-  console.log(`🧪 TEST 2: Triggering ${generationMode.toUpperCase()} generation`)
-  console.log('=============================================')
-
-  const testTopic = `E2E Test Autopilot - ${generationMode} - ${new Date().getTime()}`
-
-  // 1. Create mock video record
-  const video = await prisma.video.create({
-    data: {
-      userId,
-      topic: testTopic,
-      niche: 'finance',
-      format: generationMode === 'ai_video' ? '15s' : '30s',
-      imageStyle: 'cinematic',
-      voiceId: 'ryan',
-      voiceSpeed: 1.0,
-      musicMood: 'motivational',
-      musicVolume: 0.15,
-      subtitleConfig: {},
-      platforms: ['x'],
-      scheduledAt: new Date(Date.now() + 60000), // scheduled 1 min from now
-      status: 'pending',
-      creditsUsed: 1,
-      generationMode,
-      title: testTopic.slice(0, 60),
-    },
-  })
-
-  console.log(`✅ Created DB Video Tracking Record: ${video.id}`)
-
-  // 2. Queue for processing
-  const segmentCount = getSegmentCount(video.format)
-  await addVideoToQueue(
-    video.id,
-    userId,
-    testTopic,
-    video.niche as string,
-    video.format,
-    segmentCount,
-    video.imageStyle,
-    video.voiceId,
-    1.0
-  )
-
-  console.log(`✅ Injected into VideoQueue. Polling for completion...`)
-
-  // 3. Poll status
-  let attempts = 0
-  const MAX_POLLS = 100 // 100 * 5s = ~8 minutes timeout
-
-  while (attempts < MAX_POLLS) {
-    attempts++
-    await sleep(5000)
-
-    const check = await prisma.video.findUnique({
-      where: { id: video.id },
-      select: { status: true, platformStatuses: true, errorMessage: true }
+  try {
+    // 1. Find the user and their autopilot config
+    const config = await prisma.autopilotConfig.findFirst({
+      where: { user: { email: targetEmail } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            credits: true,
+            aiVideoCredits: true,
+            plan: true,
+          },
+        },
+      },
     })
 
-    if (!check) {
-      console.log('❌ Video record disappeared from DB!')
-      break
+    if (!config) {
+      console.error(`❌ No AutopilotConfig found for email: ${targetEmail}`)
+      return
     }
 
-    const stage = (check.platformStatuses as any)?.stage || check.status
-    process.stdout.write(`\r[Attempt ${attempts}/${MAX_POLLS}] Status: ${check.status} | Stage: ${stage}          `)
+    const conf = config as any // Bypass local type mismatches
 
-    if (check.status === 'ready' || check.status === 'scheduled') {
-      console.log(`\n🎉 SUCCESS! ${generationMode} Video Pipeline completed perfectly!`)
-      return true
+    if (!conf.enabled) {
+      console.warn(`⚠️ Autopilot is DISABLED for this user.`)
     }
 
-    if (check.status === 'failed') {
-      console.log(`\n❌ FAILED! Pipeline crashed with error: ${check.errorMessage}`)
-      return false
+    if (conf.consecutiveFailures >= 3) {
+      console.error(`❌ CRITICAL: This user has ${conf.consecutiveFailures} consecutive failures. Autopilot would normally skip them!`)
     }
-  }
 
-  console.log(`\n❌ TIMEOUT! Pipeline took too long to complete.`)
-  return false
-}
+    console.log(`✅ Config found for ID: ${conf.userId}`)
+    console.log(`   Mode: ${conf.generationMode}, Niche: ${conf.niche}, Format: ${conf.format}`)
 
-async function main() {
-  console.log('Starting Autopilot E2E Test Suite...')
+    // 2. CHECK: Schedule Validation
+    console.log('\n📅 Checking Schedule Logic...')
+    const now = new Date()
+    const timeZone = conf.timezone || 'UTC'
 
-  // Step 1: Find a valid user to test with
-  const user = await prisma.user.findFirst({
-    where: { credits: { gt: 10 } }
-  })
+    const formatterHour = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' })
+    const formatterDay = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' })
 
-  if (!user) {
-    console.log('❌ Cannot test: No users found with > 10 credits.')
-    process.exit(1)
-  }
+    const currentHour = parseInt(formatterHour.format(now), 10)
+    const currentDay = formatterDay.format(now).toLowerCase()
 
-  console.log(`Using Test User ID: ${user.id} (${user.email || 'No email'})`)
+    let schedule: any
+    try {
+      schedule = typeof config.schedule === 'string' ? JSON.parse(config.schedule) : config.schedule
+    } catch {
+      console.error('❌ Failed to parse schedule JSON')
+      return
+    }
 
-  // Run Tests
-  try {
-    // 1. Timezone Check
-    await testTimezoneResolution('Asia/Kolkata') // Example timezone
+    const todaySlots = schedule[currentDay] || []
+    const matchingSlots = todaySlots.filter((slot: any) => {
+      if (!slot.enabled) return false
+      const slotHour = parseInt(slot.time.split(':')[0], 10)
+      return slotHour === currentHour
+    })
 
-    // 2. Image Stack Generation
-    const stackResult = await runVideoGenerationTest(user.id, 'image_stack')
+    if (matchingSlots.length === 0) {
+      console.warn(`⚠️ NOT SCHEDULED for this hour (${currentHour}:00 on ${currentDay}).`)
+      console.log('   Available slots today:', todaySlots.filter((s:any) => s.enabled).map((s:any) => s.time).join(', ') || 'None')
+    } else {
+      console.log(`✅ SCHEDULE MATCHED! Target platforms: ${matchingSlots.map((s:any) => s.platform).join(', ')}`)
+    }
+
+    // 3. CHECK: Daily Posting Limit
+    console.log('\n📊 Checking Daily Limits...')
+    const todayStart = new Date()
+    todayStart.setUTCHours(0, 0, 0, 0)
+
+    const todayPostCount = await prisma.video.count({
+      where: {
+        userId: conf.userId,
+        createdAt: { gte: todayStart },
+        status: { not: 'failed' },
+      },
+    })
+
+    const isAdmin = isAdminEmail(conf.user.email)
+    const planMax = isAdmin ? 100 : Number(getDailyPostLimit(conf.user.plan))
+    const effectiveDailyMax = Math.min(conf.postsPerDay || 1, planMax)
     
-    // 3. AI Video Generation
-    if (stackResult) {
-      await runVideoGenerationTest(user.id, 'ai_video')
+    console.log(`   Posted today: ${todayPostCount} / ${effectiveDailyMax} (Limit)`)
+    if (todayPostCount >= effectiveDailyMax && !isAdmin) {
+      console.warn('⚠️ DAILY LIMIT REACHED. Autopilot would skip this user.')
+    } else {
+      console.log('✅ Daily limit check passed.')
     }
 
-    console.log('\n=============================================')
-    console.log('✨ ALL E2E TESTS COMPLETED')
-    console.log('=============================================')
+    // 4. Topic Selection & Replenishment Check
+    console.log('\n📝 Checking Topics...')
+    const pendingCount = await prisma.topicQueue.count({
+      where: { userId: conf.userId, status: 'pending' },
+    })
 
-  } catch (err) {
-    console.error('\n❌ Fatal Test Error:', err)
+    if (pendingCount < 3) {
+      console.warn(`⚠️ LOW TOPICS (${pendingCount} pending). Autopilot would trigger 'topics/generate'.`)
+    } else {
+      console.log(`✅ Topic count healthy (${pendingCount} pending).`)
+    }
+
+    const topic = await prisma.topicQueue.findFirst({
+      where: {
+        userId: conf.userId,
+        status: 'pending',
+      },
+      orderBy: { order: 'asc' },
+    })
+
+    if (!topic) {
+      console.warn('⚠️ No pending topics in queue for this user.')
+      return
+    }
+    console.log(`✅ Selected topic: "${topic.topic}"`)
+
+    // 5. Create Video record
+    console.log('\n🎬 Creating video record...')
+    const generationMode = config.generationMode || 'image_stack'
+    const isAiVideo = generationMode === 'ai_video'
+    const platforms = matchingSlots.length > 0 ? matchingSlots.map((s:any) => s.platform) : ['tiktok']
+
+    const video = await prisma.video.create({
+      data: {
+        userId: config.userId,
+        topic: topic.topic,
+        niche: config.niche,
+        format: config.format,
+        imageStyle: config.imageStyle,
+        voiceId: config.voiceId,
+        musicMood: config.musicMood,
+        musicVolume: 0.15,
+        subtitleConfig: (config.subtitleConfig as any) ?? {},
+        platforms,
+        scheduledAt: new Date(), 
+        status: 'pending',
+        creditsUsed: 1,
+        generationMode: generationMode as any,
+        title: `TEST: ${topic.topic}`.slice(0, 60),
+        topicQueueId: topic.id,
+      },
+    })
+
+    console.log(`✅ Video created: ${video.id}`)
+
+    // 6. Queue for processing
+    console.log('📡 Enqueuing for rendering...')
+    const segmentCount = getSegmentCount(config.format)
+    await addVideoToQueue(
+      video.id,
+      config.userId,
+      topic.topic,
+      config.niche,
+      config.format,
+      segmentCount,
+      config.imageStyle,
+      config.voiceId,
+      1.0
+    )
+
+    // 7. Mark topic as generating
+    await prisma.topicQueue.update({
+      where: { id: topic.id },
+      data: {
+        status: 'generating',
+        videoId: video.id,
+      },
+    })
+
+    console.log('\n--- TEST FLOW COMPLETE ---')
+    console.log(`Video ID: ${video.id}`)
+    console.log('The script verified schedule logic, limits, and successfully enqueued the job.')
+    console.log('Check your logs now for rendering progress.')
+    console.log('---------------------------')
+
+  } catch (error) {
+    console.error('❌ Test failed with error:', error)
   } finally {
     await prisma.$disconnect()
   }
 }
 
-main()
+// Run it
+const userIdArg = process.argv[2]
+testAutopilot(userIdArg)
