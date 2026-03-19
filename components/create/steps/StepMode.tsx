@@ -25,16 +25,16 @@ function StepMode({ generationMode, onChange }: StepModeProps) {
                 How do you want to create your video?
             </h2>
             <p className="text-[13px] text-[var(--text-secondary)] mt-1 mb-8">
-                Choose your generation method. They use separate credit pools.
+                AI-powered faceless video generation. Select to continue.
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="max-w-[400px] mx-auto">
                 {/* Image Stack Card */}
                 <button
                     type="button"
                     onClick={() => !regularEmpty && onChange('image_stack')}
                     className={cn(
-                        'relative rounded-[12px] border-2 p-5 text-left transition-all duration-200',
+                        'relative w-full rounded-[12px] border-2 p-5 text-left transition-all duration-200',
                         generationMode === 'image_stack'
                             ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
                             : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent-border)]',
@@ -45,10 +45,7 @@ function StepMode({ generationMode, onChange }: StepModeProps) {
                         <Layers size={28} className="text-[var(--accent)]" />
                         <div>
                             <span className="text-[16px] font-bold text-[var(--text-primary)]">
-                                Image Stack
-                            </span>
-                            <span className="ml-2 text-[10px] font-semibold text-[var(--text-dim)] border border-[var(--border)] rounded px-1.5 py-0.5">
-                                Classic
+                                Faceless Video
                             </span>
                         </div>
                     </div>
@@ -83,62 +80,7 @@ function StepMode({ generationMode, onChange }: StepModeProps) {
                     )}
                 </button>
 
-                {/* AI Video Card */}
-                <button
-                    type="button"
-                    onClick={() => !aiEmpty && onChange('ai_video')}
-                    className={cn(
-                        'relative rounded-[12px] border-2 p-5 text-left transition-all duration-200',
-                        generationMode === 'ai_video'
-                            ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
-                            : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent-border)]',
-                        aiEmpty && 'opacity-50 cursor-not-allowed'
-                    )}
-                >
-                    <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={28} className="text-[var(--accent)]" />
-                        <div>
-                            <span className="text-[16px] font-bold text-[var(--text-primary)]">
-                                AI Video
-                            </span>
-                            <span className="ml-2 text-[10px] font-semibold text-[var(--accent)] bg-[var(--accent)]/15 rounded px-1.5 py-0.5">
-                                Powered by Sora 2
-                            </span>
-                        </div>
-                    </div>
-
-                    <p className="text-[13px] text-[var(--text-secondary)] mb-4 leading-relaxed">
-                        AI generates a real video clip from your topic.
-                        10–15 seconds of cinematic footage.
-                        Keep AI audio or add your own voice and music.
-                    </p>
-
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        {['10–15 sec clip', 'AI audio', 'Real footage'].map((pill) => (
-                            <span
-                                key={pill}
-                                className="text-[10px] font-medium px-2 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]"
-                            >
-                                {pill}
-                            </span>
-                        ))}
-                    </div>
-
-                    <p className="text-[11px] text-[var(--text-dim)]">
-                        Uses 1 AI video credit · <span className="font-semibold">{aiCredits} / {aiLimit} remaining</span>
-                    </p>
-
-                    {aiEmpty && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-[var(--danger)]/10 border-t border-[var(--danger)]/25 rounded-b-[10px] px-3 py-2">
-                            <a
-                                href="/settings?tab=subscription"
-                                className="text-[11px] text-[var(--danger)] font-medium hover:underline"
-                            >
-                                No AI video credits — Upgrade →
-                            </a>
-                        </div>
-                    )}
-                </button>
+                {/* AI Video Card — temporarily hidden while Sora 2 API is unavailable */}
             </div>
         </div>
     )

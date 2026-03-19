@@ -36,7 +36,7 @@ function CreditBadge() {
     )
   }
 
-  if (isEmpty && aiEmpty) {
+  if (isEmpty) {
     return (
       <div className="rounded-[9px] bg-[var(--danger)]/10 border border-[var(--danger)]/25 p-3">
         <div className="flex items-center justify-between mb-2">
@@ -93,27 +93,7 @@ function CreditBadge() {
         />
       </div>
 
-      {/* AI Video credits */}
-      {aiLimit > 0 && (
-        <div className="mt-3 pt-2.5 border-t border-[var(--border)]">
-          <div className="flex items-baseline gap-1">
-            <span className="text-[14px] font-bold text-[var(--text-primary)] leading-none">
-              {aiCredits}
-            </span>
-            <span className="text-[10px] text-[var(--text-secondary)]">
-              / {aiLimit} AI clips
-            </span>
-          </div>
-          <div className="h-[3px] rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
-            <motion.div
-              className={cn('h-full rounded-full', aiEmpty ? 'bg-[var(--danger)]' : 'bg-purple-500')}
-              initial={{ width: 0 }}
-              animate={{ width: `${aiFillPercent}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      )}
+      {/* AI Video credits — temporarily hidden while Sora 2 API is unavailable */}
 
       <p className="text-[10px] text-[var(--text-dim)] mt-1.5">
         Resets in {daysUntilReset} days

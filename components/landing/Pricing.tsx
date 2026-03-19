@@ -270,10 +270,6 @@ function Pricing() {
 
                 {/* Key metrics */}
                 <div className="flex flex-wrap items-center gap-2 mb-5">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] bg-[var(--accent-subtle)] border border-[var(--accent)]/20 px-2 py-0.5 rounded">
-                    <Sparkles size={10} className="text-[var(--accent)]" />
-                    {plan.soraCredits} Sora 2 Gens
-                  </span>
                   <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] bg-[var(--surface-hover)] px-2 py-0.5 rounded">
                     <Film size={10} />
                     {plan.credits} videos

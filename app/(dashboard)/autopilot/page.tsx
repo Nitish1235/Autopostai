@@ -309,16 +309,15 @@ export default function AutopilotPage() {
               </span>
             </h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {/* Generation Mode */}
               <div>
                 <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">
                   Generation Mode
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="max-w-[240px]">
                   <button
                     onClick={() => setGenerationMode('image_stack')}
                     className={cn(
-                      'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
+                      'flex items-center gap-2 p-3 w-full rounded-[10px] border transition-all cursor-pointer',
                       generationMode === 'image_stack'
                         ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
                         : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
@@ -327,24 +326,10 @@ export default function AutopilotPage() {
                     <ImageIcon size={16} />
                     <div className="text-left">
                       <p className="text-[12px] font-bold">Standard</p>
-                      <p className="text-[10px] opacity-70 italic">Image stacks</p>
+                      <p className="text-[10px] opacity-70 italic">Faceless videos</p>
                     </div>
                   </button>
-                  <button
-                    onClick={() => setGenerationMode('ai_video')}
-                    className={cn(
-                      'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
-                      generationMode === 'ai_video'
-                        ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
-                        : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
-                    )}
-                  >
-                    <Video size={16} />
-                    <div className="text-left">
-                      <p className="text-[12px] font-bold">AI Video</p>
-                      <p className="text-[10px] opacity-70 italic">Sora-2 clips</p>
-                    </div>
-                  </button>
+                  {/* AI Video button — temporarily hidden while Sora 2 API is unavailable */}
                 </div>
               </div>
 
