@@ -30,11 +30,24 @@ const SAMPLE_WORDS = ['This', 'is', 'how', 'your', 'subtitles', 'will', 'look']
 
 function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
   const [activeWordIndex, setActiveWordIndex] = useState(0)
+  const [bgImage, setBgImage] = useState<string | null>(null)
 
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveWordIndex((prev) => (prev + 1) % SAMPLE_WORDS.length)
     }, 600)
+    
+    // Fetch dynamic background
+    fetch('/api/admin/subtitle-images?public=true')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data.length > 0) {
+          const defaultImg = data.data.find((img: any) => img.isDefault) || data.data[0]
+          setBgImage(defaultImg.imageUrl)
+        }
+      })
+      .catch(() => {})
+
     return () => clearInterval(interval)
   }, [])
 
@@ -99,8 +112,12 @@ function SubtitlePreview({ config, imageStyle }: SubtitlePreviewProps) {
     <PhoneMockup platform="tiktok">
       <div
         className="w-full h-full relative overflow-hidden"
-        style={{ background: gradient }}
+        style={{ background: bgImage ? '#000' : gradient }}
       >
+        {bgImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bgImage} alt="bg" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+        )}
         {/* Subtitle area */}
         <div
           className="absolute left-0 right-0 px-2"

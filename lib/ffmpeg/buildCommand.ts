@@ -149,8 +149,15 @@ export async function renderVideo(params: {
     // Get music path
     let musicPath: string
     try {
-      musicPath = getMusicPath(musicMood, videoId)
-    } catch {
+      if (musicMood.startsWith('http://') || musicMood.startsWith('https://')) {
+        musicPath = path.join(workDir, 'bg_music.mp3')
+        const res = await axios.get(musicMood, { responseType: 'arraybuffer', timeout: 30000 })
+        fs.writeFileSync(musicPath, Buffer.from(res.data))
+      } else {
+        musicPath = getMusicPath(musicMood, videoId)
+      }
+    } catch (err) {
+      console.warn('[render] Failed to load background music:', err)
       // Fallback: create silent audio if no music file
       const silentPath = path.join(workDir, 'silence.mp3')
       await execFFmpeg([

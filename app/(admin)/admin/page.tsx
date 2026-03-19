@@ -21,6 +21,7 @@ import {
     GalleryHorizontalEnd,
     LayoutGrid,
     Wand2,
+    Type,
 } from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────
@@ -52,6 +53,13 @@ interface StylePreview {
     id: string
     styleId: string
     imageUrl: string
+    active: boolean
+}
+
+interface SubtitleImage {
+    id: string
+    imageUrl: string
+    isDefault: boolean
     active: boolean
 }
 
@@ -98,7 +106,7 @@ async function uploadFile(
 // ── Main Admin Page ──────────────────────────────────
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'videos' | 'music' | 'styles' | 'voices' | 'generator'>(
+    const [activeTab, setActiveTab] = useState<'videos' | 'music' | 'styles' | 'voices' | 'generator' | 'subtitles'>(
         'videos'
     )
 
@@ -120,6 +128,7 @@ export default function AdminDashboard() {
                     { id: 'music' as const, label: 'Music Library', icon: Music },
                     { id: 'styles' as const, label: 'Image Styles', icon: Palette },
                     { id: 'voices' as const, label: 'Voice Previews', icon: Mic },
+                    { id: 'subtitles' as const, label: 'Subtitle Previews', icon: Type },
                 ].map((tab) => {
                     const Icon = tab.icon
                     return (
@@ -144,6 +153,7 @@ export default function AdminDashboard() {
             {activeTab === 'music' && <MusicManager />}
             {activeTab === 'styles' && <StyleManager />}
             {activeTab === 'voices' && <VoiceManager />}
+            {activeTab === 'subtitles' && <SubtitleImageManager />}
         </div>
     )
 }
@@ -930,6 +940,173 @@ function StyleManager() {
                             </div>
                         )
                     })}
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ══════════════════════════════════════════════════════
+// SUBTITLE IMAGE MANAGER
+// ══════════════════════════════════════════════════════
+
+function SubtitleImageManager() {
+    const [images, setImages] = useState<SubtitleImage[]>([])
+    const [loading, setLoading] = useState(true)
+    const [showForm, setShowForm] = useState(false)
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [isDefault, setIsDefault] = useState(false)
+    const [uploading, setUploading] = useState(false)
+
+    const fetchImages = useCallback(async () => {
+        setLoading(true)
+        const res = await fetch('/api/admin/subtitle-images')
+        const data = await res.json()
+        if (data.success) setImages(data.data)
+        setLoading(false)
+    }, [])
+
+    useEffect(() => {
+        fetchImages()
+    }, [fetchImages])
+
+    const handleAdd = async () => {
+        if (!imageFile) return
+        setUploading(true)
+
+        const imageUrl = await uploadFile(imageFile, 'subtitles')
+        if (!imageUrl) {
+            setUploading(false)
+            return
+        }
+
+        await fetch('/api/admin/subtitle-images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl, isDefault }),
+        })
+
+        setImageFile(null)
+        setIsDefault(false)
+        setShowForm(false)
+        setUploading(false)
+        fetchImages()
+    }
+
+    const handleDelete = async (id: string) => {
+        await fetch('/api/admin/subtitle-images', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+        })
+        fetchImages()
+    }
+
+    if (loading) {
+        return <div className="text-[#888] animate-pulse">Loading subtitle previews...</div>
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-xl font-bold text-white">Subtitle Backgrounds</h2>
+                    <p className="text-sm text-[#888] mt-1">
+                        Upload background images used behind subtitle text in the creation preview.
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    disabled={uploading}
+                    className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                >
+                    {showForm ? <X size={16} /> : <Plus size={16} />}
+                    {showForm ? 'Cancel' : 'Upload Image'}
+                </button>
+            </div>
+
+            {showForm && (
+                <div className="bg-[#12121a] border border-[#1e1e2e] p-6 rounded-xl space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#ccc]">Image File</label>
+                            <label className="flex items-center justify-center w-full h-10 px-4 transition bg-[#0f0f16] border border-[#1e1e2e] rounded-lg cursor-pointer hover:border-[#333]">
+                                <span className="flex items-center gap-2 text-sm text-[#888]">
+                                    <ImageIcon size={16} />
+                                    {imageFile ? imageFile.name : 'Choose image...'}
+                                </span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2 flex items-center h-full pt-8">
+                            <label className="flex items-center gap-2 text-sm text-[#ccc] cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isDefault} 
+                                    onChange={(e) => setIsDefault(e.target.checked)} 
+                                    className="rounded border-[#333] bg-[#0f0f16]" 
+                                />
+                                Set as Default Background
+                            </label>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleAdd}
+                        disabled={!imageFile || uploading}
+                        className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                        {uploading ? (
+                            <>
+                                <RefreshCw size={16} className="animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            <>
+                                <Upload size={16} />
+                                Upload Image
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {images.map((img) => (
+                    <div
+                        key={img.id}
+                        className="bg-[#12121a] border border-[#1e1e2e] rounded-xl overflow-hidden group"
+                    >
+                        <div className="aspect-video relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={img.imageUrl}
+                                alt="Subtitle Preview"
+                                className="w-full h-full object-cover"
+                            />
+                            {img.isDefault && (
+                                <div className="absolute top-2 left-2 bg-violet-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
+                                    DEFAULT
+                                </div>
+                            )}
+                            <button
+                                onClick={() => handleDelete(img.id)}
+                                className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm cursor-pointer"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {images.length === 0 && (
+                <div className="text-center py-12 bg-[#12121a] border border-[#1e1e2e] rounded-xl text-[#888] text-sm">
+                    No subtitle preview images uploaded yet.
                 </div>
             )}
         </div>

@@ -1,26 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { Volume2, Mic } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Volume2, Mic, PlayCircle, PauseCircle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { VOICES } from '@/lib/utils/constants'
 import type { AiAudioMode, MusicMood } from '@/types'
+
+interface AdminMusicTrack {
+    id: string
+    name: string
+    mood: string
+    fileUrl: string
+}
 
 interface StepAudioProps {
     aiAudioMode: AiAudioMode
     onChange: (mode: AiAudioMode) => void
     voiceId: string
     onVoiceChange: (id: string) => void
-    musicMood: MusicMood
-    onMusicMoodChange: (mood: MusicMood) => void
+    musicMood: string // Now accepts either mood string OR standard fileUrl
+    onMusicMoodChange: (moodOrUrl: string) => void
     musicVolume: number
     onMusicVolumeChange: (vol: number) => void
 }
 
 // Use the canonical English voices from constants — same list as the image-stack voice step
 const AI_VOICE_PRESETS = VOICES.filter((v) => v.language === 'English')
-
-const MUSIC_MOODS: MusicMood[] = ['upbeat', 'dark', 'motivational', 'calm', 'mystery']
 
 function StepAudio({
     aiAudioMode,
@@ -32,6 +37,46 @@ function StepAudio({
     musicVolume,
     onMusicVolumeChange,
 }: StepAudioProps) {
+    const [tracks, setTracks] = useState<AdminMusicTrack[]>([])
+    const [playingUrl, setPlayingUrl] = useState<string | null>(null)
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => {
+        fetch('/api/admin/music?public=true')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    setTracks(data.data)
+                }
+            })
+            .catch(() => {})
+
+        if (typeof window !== 'undefined' && !audioRef.current) {
+            audioRef.current = new Audio()
+            audioRef.current.onended = () => setPlayingUrl(null)
+        }
+        
+        return () => {
+             if (audioRef.current) {
+                 audioRef.current.pause()
+                 audioRef.current = null
+             }
+        }
+    }, [])
+
+    const handlePlay = (url: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!audioRef.current) return
+
+        if (playingUrl === url) {
+            audioRef.current.pause()
+            setPlayingUrl(null)
+        } else {
+            audioRef.current.src = url
+            audioRef.current.play().catch(() => {})
+            setPlayingUrl(url)
+        }
+    }
     return (
         <div className="max-w-[720px] mx-auto pt-10">
             <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
@@ -149,28 +194,68 @@ function StepAudio({
                         </div>
                     </div>
 
-                    {/* Music mood */}
+                    {/* Music selector */}
                     <div>
-                        <p className="text-[13px] font-semibold text-[var(--text-primary)] mb-3">
-                            Music Mood
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                            {MUSIC_MOODS.map((mood) => (
-                                <button
-                                    key={mood}
-                                    type="button"
-                                    onClick={() => onMusicMoodChange(mood)}
-                                    className={cn(
-                                        'rounded-full px-4 py-2 text-[12px] font-medium capitalize transition-all duration-150',
-                                        musicMood === mood
-                                            ? 'bg-[var(--accent)] text-white'
-                                            : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-border)]'
-                                    )}
-                                >
-                                    {mood}
-                                </button>
-                            ))}
+                        <div className="flex justify-between items-end mb-3">
+                            <p className="text-[13px] font-semibold text-[var(--text-primary)]">
+                                Background Music
+                            </p>
                         </div>
+                        
+                        {tracks.length === 0 ? (
+                            <div className="text-[12px] text-[var(--text-dim)] italic">Loading music library...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                                {tracks.map((track) => {
+                                    const isSelected = musicMood === track.fileUrl
+                                    const isPlaying = playingUrl === track.fileUrl
+
+                                    return (
+                                        <div
+                                            key={track.id}
+                                            onClick={() => onMusicMoodChange(track.fileUrl)}
+                                            className={cn(
+                                                'relative flex items-center justify-between p-3 rounded-[10px] border transition-all cursor-pointer group',
+                                                isSelected
+                                                    ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
+                                                    : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent-border)] hover:bg-[#1f1f2e]'
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <button
+                                                    onClick={(e) => handlePlay(track.fileUrl, e)}
+                                                    className={cn(
+                                                        'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-colors',
+                                                        isPlaying
+                                                            ? 'bg-[var(--accent)] text-white'
+                                                            : 'bg-[var(--bg-muted)] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] group-hover:bg-[#2a2a3e]'
+                                                    )}
+                                                >
+                                                    {isPlaying ? <PauseCircle size={18} /> : <PlayCircle size={18} />}
+                                                </button>
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
+                                                        {track.name}
+                                                    </span>
+                                                    <span className="text-[11px] text-[var(--text-dim)] uppercase tracking-wider">
+                                                        {track.mood}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Selection indicator */}
+                                            {isSelected && (
+                                                <div className="flex-shrink-0 w-4 h-4 rounded-full bg-[var(--accent)] flex items-center justify-center ml-2">
+                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                                                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Music volume */}

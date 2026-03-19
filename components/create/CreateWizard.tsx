@@ -18,7 +18,6 @@ import type {
   ScriptSegment,
   VideoFormat,
   ImageStyle,
-  MusicMood,
   SubtitleConfig,
   Platform,
   GenerationMode,
@@ -85,7 +84,7 @@ function CreateWizard() {
     (user?.defaultStyle as ImageStyle) || 'cinematic'
   )
   const [customSuffix, setCustomSuffix] = useState('')
-  const [musicMood, setMusicMood] = useState<MusicMood>('upbeat')
+  const [musicMood, setMusicMood] = useState<string>('upbeat')
   const [musicVolume, setMusicVolume] = useState(0.3)
   const [subtitleConfig, setSubtitleConfig] =
     useState<SubtitleConfig>(DEFAULT_SUBTITLE_CONFIG)
