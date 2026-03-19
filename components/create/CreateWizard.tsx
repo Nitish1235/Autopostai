@@ -86,6 +86,7 @@ function CreateWizard() {
   const [customSuffix, setCustomSuffix] = useState('')
   const [musicMood, setMusicMood] = useState<string>('upbeat')
   const [musicVolume, setMusicVolume] = useState(0.3)
+  const [aiDuration, setAiDuration] = useState(10)
   const [subtitleConfig, setSubtitleConfig] =
     useState<SubtitleConfig>(DEFAULT_SUBTITLE_CONFIG)
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
@@ -243,6 +244,7 @@ function CreateWizard() {
           scheduledAt,
           generationMode,
           aiAudioMode: isAiVideo ? aiAudioMode : undefined,
+          aiDuration: isAiVideo ? aiDuration : undefined,
         }),
       })
 
@@ -449,6 +451,8 @@ function CreateWizard() {
             niche={niche}
             onNicheChange={setNiche}
             isAiVideo={isAiVideo}
+            aiDuration={aiDuration}
+            onAiDurationChange={setAiDuration}
           />
         )}
         {steps[currentStep]?.id === 'script' && (

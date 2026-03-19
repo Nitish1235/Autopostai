@@ -87,6 +87,7 @@ export interface AiVideoJobData {
   subtitleConfig?: Record<string, unknown>
   skipAudio?: boolean
   isShowcase?: boolean
+  aiDuration?: number
 }
 
 // ── Queue Functions ──────────────────────────────────

@@ -46,6 +46,7 @@ const schema = z.object({
   scheduledAt: z.string().datetime().nullable().optional(),
   generationMode: z.enum(['image_stack', 'ai_video']).default('image_stack'),
   aiAudioMode: z.enum(['keep_ai', 'replace']).optional(),
+  aiDuration: z.number().min(5).max(20).optional(),
   script: z
     .array(
       z.object({
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
           musicMood: aiAudioMode === 'replace' ? musicMood : undefined,
           musicVolume: aiAudioMode === 'replace' ? musicVolume : undefined,
           subtitleConfig: aiAudioMode === 'replace' ? subtitleConfig : undefined,
+          aiDuration: body.aiDuration,
         })
       } else {
         const segmentCount = getSegmentCount(format)

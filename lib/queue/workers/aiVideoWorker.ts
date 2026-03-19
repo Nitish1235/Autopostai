@@ -69,7 +69,7 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
         // Submit generation to Crun AI
         const { taskId } = await generateVideo({
             prompt,
-            duration: AI_VIDEO_DURATION.default,
+            duration: data.aiDuration ?? AI_VIDEO_DURATION.default,
         })
 
         console.log(`[aiVideoWorker] Task ${taskId} submitted for video ${videoId}`)

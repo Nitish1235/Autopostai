@@ -15,6 +15,8 @@ interface StepTopicProps {
   niche: string
   onNicheChange: (niche: string) => void
   isAiVideo?: boolean
+  aiDuration?: number
+  onAiDurationChange?: (duration: number) => void
 }
 const FORMAT_OPTIONS: { id: VideoFormat; label: string }[] = [
   { id: '15s', label: '15s' },
@@ -74,6 +76,8 @@ function StepTopic({
   niche,
   onNicheChange,
   isAiVideo = false,
+  aiDuration = 10,
+  onAiDurationChange,
 }: StepTopicProps) {
   const [mode, setMode] = useState<'guided' | 'custom'>(
     niche === 'custom' ? 'custom' : 'guided'
@@ -172,6 +176,27 @@ function StepTopic({
             </button>
           ))}
         </div>
+
+        {/* AI Video Duration selector */}
+        {isAiVideo && (
+          <div className="flex gap-1.5">
+            <span className="text-[12px] text-[var(--text-dim)] self-center mr-1">Duration:</span>
+            {[10, 15].map((d) => (
+              <button
+                key={d}
+                onClick={() => onAiDurationChange?.(d)}
+                className={cn(
+                  'px-3 py-1.5 rounded-[7px] text-[12px] font-medium transition-all cursor-pointer',
+                  aiDuration === d
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                )}
+              >
+                {d}s
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Niche dropdown (Hidden in Custom mode) */}
         {mode === 'guided' && (
