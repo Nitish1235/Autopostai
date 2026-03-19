@@ -84,8 +84,6 @@ function CreateWizard() {
     (user?.defaultStyle as ImageStyle) || 'cinematic'
   )
   const [customSuffix, setCustomSuffix] = useState('')
-  const [musicMood, setMusicMood] = useState<string>('upbeat')
-  const [musicVolume, setMusicVolume] = useState(0.3)
   const [aiDuration, setAiDuration] = useState(10)
   const [subtitleConfig, setSubtitleConfig] =
     useState<SubtitleConfig>(DEFAULT_SUBTITLE_CONFIG)
@@ -148,7 +146,6 @@ function CreateWizard() {
             setScript(v.script || [])
             setVoiceId(v.voiceId || 'Noah')
             setImageStyle(v.imageStyle || 'cinematic')
-            setMusicMood(v.musicMood || 'upbeat')
             setSubtitleConfig(v.subtitleConfig || DEFAULT_SUBTITLE_CONFIG)
             setSelectedPlatforms(v.platforms || ['tiktok'])
             setVideoUrl(v.videoUrl)
@@ -237,8 +234,6 @@ function CreateWizard() {
           voiceSpeed,
           imageStyle,
           customSuffix,
-          musicMood,
-          musicVolume,
           subtitleConfig,
           platforms: selectedPlatforms,
           scheduledAt,
@@ -336,8 +331,6 @@ function CreateWizard() {
     voiceSpeed,
     imageStyle,
     customSuffix,
-    musicMood,
-    musicVolume,
     subtitleConfig,
     selectedPlatforms,
     scheduledAt,
@@ -492,10 +485,6 @@ function CreateWizard() {
             onChange={setAiAudioMode}
             voiceId={voiceId}
             onVoiceChange={setVoiceId}
-            musicMood={musicMood}
-            onMusicMoodChange={setMusicMood}
-            musicVolume={musicVolume}
-            onMusicVolumeChange={setMusicVolume}
           />
         )}
         {steps[currentStep]?.id === 'preview' && (

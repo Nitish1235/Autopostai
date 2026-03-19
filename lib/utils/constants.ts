@@ -235,44 +235,6 @@ export const VOICES: {
     { id: 'Haruto', name: 'Haruto', gender: 'Male', accent: 'Japanese', tags: ['Clear', 'Professional'], language: 'Japanese', unrealId: 'Haruto' },
   ]
 
-export const MUSIC_MOODS: {
-  id: MusicMood
-  label: string
-  emoji: string
-  desc: string
-}[] = [
-    {
-      id: 'upbeat',
-      label: 'Upbeat',
-      emoji: '\u26A1',
-      desc: 'Energetic, fast-paced, motivational',
-    },
-    {
-      id: 'dark',
-      label: 'Dark',
-      emoji: '\uD83C\uDF11',
-      desc: 'Tense, dramatic, mysterious',
-    },
-    {
-      id: 'motivational',
-      label: 'Motivational',
-      emoji: '\uD83D\uDD25',
-      desc: 'Inspiring, powerful, building',
-    },
-    {
-      id: 'calm',
-      label: 'Calm',
-      emoji: '\uD83C\uDF0A',
-      desc: 'Ambient, peaceful, focused',
-    },
-    {
-      id: 'mystery',
-      label: 'Mystery',
-      emoji: '\uD83D\uDD2E',
-      desc: 'Suspenseful, eerie, unknown',
-    },
-  ]
-
 export const NICHES: {
   id: string
   label: string

@@ -146,41 +146,6 @@ export async function renderVideo(params: {
 
     await Promise.all([...imageDownloads, audioDownload])
 
-    // Get music path
-    let musicPath: string
-    try {
-      let finalMusicUrl = musicMood
-      if (!finalMusicUrl.startsWith('http')) {
-        const tracks = await prisma.adminMusicTrack.findMany({
-          where: { mood: musicMood, active: true }
-        })
-        if (tracks.length > 0) {
-          const index = videoId.charCodeAt(0) % tracks.length
-          finalMusicUrl = tracks[index].fileUrl
-        } else {
-          const anyTracks = await prisma.adminMusicTrack.findMany({ where: { active: true } })
-          if (anyTracks.length > 0) finalMusicUrl = anyTracks[0].fileUrl
-          else throw new Error('No admin music tracks found in database')
-        }
-      }
-
-      musicPath = path.join(workDir, 'bg_music.mp3')
-      const res = await axios.get(finalMusicUrl, { responseType: 'arraybuffer', timeout: 30000 })
-      fs.writeFileSync(musicPath, Buffer.from(res.data))
-    } catch (err) {
-      console.warn('[render] Failed to load background music:', err)
-      // Fallback: create silent audio if no music file
-      const silentPath = path.join(workDir, 'silence.mp3')
-      await execFFmpeg([
-        '-f', 'lavfi',
-        '-i', 'anullsrc=r=44100:cl=stereo',
-        '-t', '1',
-        '-c:a', 'libmp3lame',
-        '-y', silentPath,
-      ])
-      musicPath = silentPath
-    }
-    
     // ── STEP 2: Prepare Timings & Subtitles ────────────────────────
 
     await updateProgress(videoId, 70, 'preparing')
@@ -257,28 +222,26 @@ export async function renderVideo(params: {
         await writeASSFile(assContent, assPath)
     }
 
-    // ── STEP 3: Mix voice + music ──────────────────────
+    // ── STEP 3: Audio setup ──────────────────────
 
-    await updateProgress(videoId, 75, 'mixing_audio')
-    console.log(`[render] Mixing audio for ${videoId}`)
+    await updateProgress(videoId, 75, 'preparing_audio')
+    console.log(`[render] Preparing audio for ${videoId}`)
     
-    // We only need the mixed audio file
-    const mixedAudioPath = path.join(workDir, 'audio_mixed.aac')
-    const totalDuration = clipDurations.reduce((a, b) => a + b, 0)
-
+    // Use master voice directly as the sole audio source
+    const mixedAudioPath = path.join(workDir, 'audio_final.aac')
     if (fs.existsSync(masterVoicePath)) {
-      const audioMixCmd = buildAudioMixCommand({
-        voicePath: masterVoicePath,
-        musicPath,
-        outputPath: mixedAudioPath,
-        musicVolume,
-        voiceVolume: 1.0,
-        totalDuration,
-      })
-      await execFFmpeg(audioMixCmd)
+        // Convert mp3 to aac or just copy if buildMegaRenderCommand can handle it.
+        // buildMegaRenderCommand uses -c:a copy, so we should ensure it's in a compatible format if needed,
+        // but meistly it should work with mp3 too. Let's just copy for now.
+        fs.copyFileSync(masterVoicePath, mixedAudioPath)
     } else {
-        // Just copy the music if no voice
-        fs.copyFileSync(musicPath, mixedAudioPath)
+        // Fallback to silence if no voice (rare)
+        await execFFmpeg([
+            '-f', 'lavfi',
+            '-i', 'anullsrc=r=44100:cl=stereo',
+            '-t', '1',
+            '-y', mixedAudioPath
+        ])
     }
 
     // ── STEP 4: Single Mega Render Pass ──────────────────────

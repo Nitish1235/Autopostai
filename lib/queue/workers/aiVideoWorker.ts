@@ -117,30 +117,30 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
 
             await updateProgress(videoId, 'generating_voice', 70)
 
-            // Get background music path
-            const musicPath = getMusicPath(musicMood ?? 'upbeat', videoId)
+            // // Get background music path
+            // const musicPath = getMusicPath(musicMood ?? 'upbeat', videoId)
 
-            // Mix voice + music
-            const mixedAudioPath = path.join(tmpDir, 'mixed_audio.aac')
-            const mixArgs = buildAudioMixCommand({
-                voicePath,
-                musicPath,
-                outputPath: mixedAudioPath,
-                musicVolume: musicVolume ?? 0.3,
-                voiceVolume: 1.0,
-                totalDuration: result.duration,
-            })
+            // // Mix voice + music
+            // const mixedAudioPath = path.join(tmpDir, 'mixed_audio.aac')
+            // const mixArgs = buildAudioMixCommand({
+            //     voicePath,
+            //     musicPath,
+            //     outputPath: mixedAudioPath,
+            //     musicVolume: musicVolume ?? 0.3,
+            //     voiceVolume: 1.0,
+            //     totalDuration: result.duration,
+            // })
 
-            await execFileAsync('ffmpeg', mixArgs)
-            console.log(`[aiVideoWorker] Audio mixed for ${videoId}`)
+            // await execFileAsync('ffmpeg', mixArgs)
+            // console.log(`[aiVideoWorker] Audio mixed for ${videoId}`)
 
             await updateProgress(videoId, 'rendering', 80)
 
-            // Mux: strip original audio + add mixed audio
+            // Mux: strip original audio + add voice audio
             const finalPath = path.join(tmpDir, 'final.mp4')
             const muxArgs = buildFinalMuxCommand({
                 videoPath: rawVideoPath,
-                audioPath: mixedAudioPath,
+                audioPath: voicePath,
                 outputPath: finalPath,
                 duration: result.duration,
             })
