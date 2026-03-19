@@ -168,7 +168,7 @@ export async function generateVoice(params: {
           Authorization: `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
         },
-        timeout: 30000,
+        timeout: 60000,
       }
     )
     speechData = speechResponse.data
@@ -187,10 +187,14 @@ export async function generateVoice(params: {
         throw new Error('Unreal Speech rate limit exceeded')
       }
       throw new Error(
-        `Voice generation failed: ${error.response?.status ?? 'unknown'} — ${JSON.stringify(error.response?.data ?? {})}`
+        `Voice generation failed: ${error.response?.status ?? 'unknown'} — ${JSON.stringify(error.response?.data ?? {})} — ${error.message}`
       )
     }
-    throw error
+    throw new Error(`Voice generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+
+  if (!speechData.OutputUri) {
+    throw new Error(`Unreal Speech returned success but missing OutputUri. full response: ${JSON.stringify(speechData)}`)
   }
 
   // Download audio binary from the returned URL
@@ -198,11 +202,11 @@ export async function generateVoice(params: {
   try {
     const audioDownload = await axios.get(speechData.OutputUri, {
       responseType: 'arraybuffer',
-      timeout: 30000,
+      timeout: 60000,
     })
     audioBuffer = Buffer.from(audioDownload.data)
-  } catch {
-    throw new Error('Failed to download audio from Unreal Speech OutputUri')
+  } catch (err: any) {
+    throw new Error(`Failed to download audio from Unreal Speech OutputUri: ${err?.message || 'unknown error'}`)
   }
 
   // Download word timestamps from TimestampsUri
