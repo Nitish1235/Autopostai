@@ -109,24 +109,32 @@ export async function generateVideo(params: {
 }): Promise<{ taskId: string }> {
     const duration = params.duration ?? AI_VIDEO_DURATION.default
 
-    const response = await axios.post<CrunCreateTaskResponse>(
-        `${BASE_URL}/CreateTask`,
-        {
-            model: CRUN_AI_MODELS.sora2,
-            input: {
-                prompt: params.prompt,
-                aspect_ratio: '9:16',
-                duration,
+    let response;
+    try {
+        response = await axios.post<CrunCreateTaskResponse>(
+            `${BASE_URL}/CreateTask`,
+            {
+                model: CRUN_AI_MODELS.sora2,
+                input: {
+                    prompt: params.prompt,
+                    aspect_ratio: '9:16',
+                    duration,
+                },
             },
-        },
-        {
-            headers: {
-                'X-API-KEY': API_KEY,
-                'Content-Type': 'application/json',
-            },
-            timeout: 30000,
+            {
+                headers: {
+                    'X-API-KEY': API_KEY,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30000,
+            }
+        )
+    } catch (error: any) {
+        if (error.response?.data) {
+            throw new Error(`Crun AI HTTP 422 Error Payload: ${JSON.stringify(error.response.data)}`)
         }
-    )
+        throw error;
+    }
 
     if (response.data.code !== 200) {
         throw new Error(`Crun AI create task failed: ${response.data.message}`)
