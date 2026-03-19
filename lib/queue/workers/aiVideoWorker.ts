@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db/prisma'
 import { inngest } from '@/lib/inngest/client'
 import type { AiVideoJobData } from '@/lib/queue/videoQueue'
 import {
-    buildSoraPrompt,
+    buildWanPrompt,
     generateVideo,
     pollUntilComplete,
     downloadAndUploadVideo,
@@ -56,8 +56,8 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
             data: { status: 'generating_script' },
         })
 
-        // Build Sora 2 prompt
-        const prompt = buildSoraPrompt({ topic, niche, imageStyle, format })
+        // Build Wan 2.5 prompt
+        const prompt = buildWanPrompt({ topic, niche, imageStyle, format })
 
         await prisma.video.update({
             where: { id: videoId },
@@ -92,8 +92,8 @@ export async function handleAiVideoJob(data: AiVideoJobData) {
                 data: { status: 'generating_voice' },
             })
 
-            // Download the Sora 2 video to local temp
-            const rawVideoPath = path.join(tmpDir, 'sora_raw.mp4')
+            // Download the Wan 2.5 video to local temp
+            const rawVideoPath = path.join(tmpDir, 'wan_raw.mp4')
             const videoResponse = await axios.get(result.videoUrl, {
                 responseType: 'arraybuffer',
                 timeout: 120000,

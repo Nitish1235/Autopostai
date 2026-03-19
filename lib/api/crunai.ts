@@ -75,9 +75,9 @@ const DEFAULT_SCENE = 'engaging visual storytelling, dynamic composition'
 // ── Exported Functions ────────────────────────────────
 
 /**
- * Build an optimized Sora 2 prompt from user config.
+ * Build an optimized Wan 2.5 prompt from user config.
  */
-export function buildSoraPrompt(params: {
+export function buildWanPrompt(params: {
     topic: string
     niche: string
     imageStyle: string
@@ -114,12 +114,14 @@ export async function generateVideo(params: {
         response = await axios.post<CrunCreateTaskResponse>(
             `${BASE_URL}/CreateTask`,
             {
-                model: CRUN_AI_MODELS.sora2,
+                model: CRUN_AI_MODELS.wan25,
                 input: {
                     prompt: params.prompt,
-                    aspect_ratio: 'portrait',
-                    duration,
-                    remove_watermark: false,
+                    aspect_ratio: '9:16',
+                    resolution: '720P',
+                    duration: 10,
+                    prompt_extend: false,
+                    shot_type: 'single'
                 },
             },
             {

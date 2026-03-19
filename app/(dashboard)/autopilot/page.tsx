@@ -30,24 +30,24 @@ const FORMAT_OPTIONS: { id: VideoFormat; label: string }[] = [
 ]
 
 const STYLE_GRADIENTS: Record<string, string> = {
-  cinematic:    'linear-gradient(160deg, #0D2137, #1A4D6E, #C8762A)',
-  anime:        'linear-gradient(160deg, #FFB3D9, #B3D9FF, #FFD9B3)',
+  cinematic: 'linear-gradient(160deg, #0D2137, #1A4D6E, #C8762A)',
+  anime: 'linear-gradient(160deg, #FFB3D9, #B3D9FF, #FFD9B3)',
   dark_fantasy: 'linear-gradient(160deg, #0D0013, #200033, #400060)',
-  cyberpunk:    'linear-gradient(160deg, #000D1A, #001F3F, #CC00FF)',
-  documentary:  'linear-gradient(160deg, #2C2416, #4A3E2E, #766655)',
-  vintage:      'linear-gradient(160deg, #3D2B1F, #7A5C3A, #D4A86A)',
-  '3d_render':  'linear-gradient(160deg, #1A1A2E, #16213E, #0F3460)',
-  minimal:      'linear-gradient(160deg, #E8E8E8, #F5F5F5, #FFFFFF)',
+  cyberpunk: 'linear-gradient(160deg, #000D1A, #001F3F, #CC00FF)',
+  documentary: 'linear-gradient(160deg, #2C2416, #4A3E2E, #766655)',
+  vintage: 'linear-gradient(160deg, #3D2B1F, #7A5C3A, #D4A86A)',
+  '3d_render': 'linear-gradient(160deg, #1A1A2E, #16213E, #0F3460)',
+  minimal: 'linear-gradient(160deg, #E8E8E8, #F5F5F5, #FFFFFF)',
 }
 
 const DEFAULT_SCHEDULE: WeeklySchedule = {
-  monday:    [{ time: '09:00', platform: 'x', enabled: true }],
-  tuesday:   [{ time: '12:00', platform: 'x', enabled: true }],
+  monday: [{ time: '09:00', platform: 'x', enabled: true }],
+  tuesday: [{ time: '12:00', platform: 'x', enabled: true }],
   wednesday: [{ time: '09:00', platform: 'x', enabled: true }],
-  thursday:  [{ time: '18:00', platform: 'x', enabled: true }],
-  friday:    [{ time: '09:00', platform: 'x', enabled: true }],
-  saturday:  [],
-  sunday:    [],
+  thursday: [{ time: '18:00', platform: 'x', enabled: true }],
+  friday: [{ time: '09:00', platform: 'x', enabled: true }],
+  saturday: [],
+  sunday: [],
 }
 
 function timeUntil(dateStr: string | null | undefined): string {
@@ -55,7 +55,7 @@ function timeUntil(dateStr: string | null | undefined): string {
   const diff = new Date(dateStr).getTime() - Date.now()
   if (diff <= 0) return 'Any moment now'
   const hours = Math.floor(diff / 3600000)
-  const mins  = Math.floor((diff % 3600000) / 60000)
+  const mins = Math.floor((diff % 3600000) / 60000)
   if (hours > 0) return `${hours}h ${mins}m`
   return `${mins}m`
 }
@@ -65,25 +65,25 @@ export default function AutopilotPage() {
   const { data: session } = useSession()
   const isAdmin = (session?.user as any)?.isAdmin ?? false
 
-  const [loading,  setLoading]  = useState(true)
+  const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
-  const [saving,   setSaving]   = useState(false)
+  const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'planner' | 'queue' | 'settings'>('planner')
 
   // Config state
-  const [enabled,        setEnabled]        = useState(false)
-  const [niche,          setNiche]          = useState('finance')
-  const [format,         setFormat]         = useState<VideoFormat>('60s')
-  const [postsPerDay,    setPostsPerDay]    = useState(2)
-  const [imageStyle,     setImageStyle]     = useState<ImageStyle>('cinematic')
-  const [voiceId,        setVoiceId]        = useState('Noah')
+  const [enabled, setEnabled] = useState(false)
+  const [niche, setNiche] = useState('finance')
+  const [format, setFormat] = useState<VideoFormat>('60s')
+  const [postsPerDay, setPostsPerDay] = useState(2)
+  const [imageStyle, setImageStyle] = useState<ImageStyle>('cinematic')
+  const [voiceId, setVoiceId] = useState('Noah')
   const [generationMode, setGenerationMode] = useState<'image_stack' | 'ai_video'>('image_stack')
-  const [approvalMode,   setApprovalMode]   = useState<'review' | 'autopilot'>('review')
-  const [schedule,       setSchedule]       = useState<WeeklySchedule>(DEFAULT_SCHEDULE)
-  const [aiOptimize,     setAiOptimize]     = useState(false)
-  const [topics,         setTopics]         = useState<TopicQueueType[]>([])
-  const [nextRunAt,      setNextRunAt]      = useState<string | null>(null)
-  const [stylePreviews,  setStylePreviews]  = useState<Record<string, string>>({})
+  const [approvalMode, setApprovalMode] = useState<'review' | 'autopilot'>('review')
+  const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE)
+  const [aiOptimize, setAiOptimize] = useState(false)
+  const [topics, setTopics] = useState<TopicQueueType[]>([])
+  const [nextRunAt, setNextRunAt] = useState<string | null>(null)
+  const [stylePreviews, setStylePreviews] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function fetchConfig() {
@@ -130,7 +130,7 @@ export default function AutopilotPage() {
           if (stylesData.success && stylesData.data) {
             const map: Record<string, string> = {}
             stylesData.data.forEach((p: { styleId: string; imageUrl: string }) => {
-                map[p.styleId] = p.imageUrl
+              map[p.styleId] = p.imageUrl
             })
             setStylePreviews(map)
           }
@@ -288,7 +288,7 @@ export default function AutopilotPage() {
         <Tabs
           items={[
             { id: 'planner', label: '📅 Planner' },
-            { id: 'queue',   label: '📋 Topic Queue' },
+            { id: 'queue', label: '📋 Topic Queue' },
             { id: 'settings', label: '⚙️ Settings' },
           ]}
           active={activeTab}
@@ -309,15 +309,16 @@ export default function AutopilotPage() {
               </span>
             </h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              {/* Generation Mode */}
               <div>
                 <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">
                   Generation Mode
                 </label>
-                <div className="max-w-[240px]">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setGenerationMode('image_stack')}
                     className={cn(
-                      'flex items-center gap-2 p-3 w-full rounded-[10px] border transition-all cursor-pointer',
+                      'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
                       generationMode === 'image_stack'
                         ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
                         : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
@@ -326,10 +327,24 @@ export default function AutopilotPage() {
                     <ImageIcon size={16} />
                     <div className="text-left">
                       <p className="text-[12px] font-bold">Standard</p>
-                      <p className="text-[10px] opacity-70 italic">Faceless videos</p>
+                      <p className="text-[10px] opacity-70 italic">Image stacks</p>
                     </div>
                   </button>
-                  {/* AI Video button — temporarily hidden while Sora 2 API is unavailable */}
+                  <button
+                    onClick={() => setGenerationMode('ai_video')}
+                    className={cn(
+                      'flex items-center gap-2 p-3 rounded-[10px] border transition-all cursor-pointer',
+                      generationMode === 'ai_video'
+                        ? 'bg-[var(--accent-subtle)] border-[var(--accent)] text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                    )}
+                  >
+                    <Video size={16} />
+                    <div className="text-left">
+                      <p className="text-[12px] font-bold">AI Video</p>
+                      <p className="text-[10px] opacity-70 italic">Wan 2.5 clips</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
@@ -351,7 +366,7 @@ export default function AutopilotPage() {
               <div>
                 <label className="text-[12px] font-medium text-[var(--text-secondary)] mb-1.5 block">Format</label>
                 <div className="flex gap-1.5">
-                  {FORMAT_OPTIONS.filter(opt => 
+                  {FORMAT_OPTIONS.filter(opt =>
                     generationMode === 'ai_video' ? opt.id === '15s' : opt.id !== '15s'
                   ).map((opt) => (
                     <button

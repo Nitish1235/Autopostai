@@ -26,11 +26,11 @@ export const PLANS = {
     name: 'Starter',
     price: 19,
     credits: 30,
-    aiVideoCredits: 20,
+    aiVideoCredits: 0,
     postsPerDay: 1,
     features: [
       '30 faceless videos per month',
-      '20 AI video clips per month',
+      'No AI video generation',
       'Post 1 video/day across all platforms',
       'All 8 AI visual styles',
       'All 48 voice options',
@@ -45,11 +45,11 @@ export const PLANS = {
     name: 'Pro',
     price: 49,
     credits: 100,
-    aiVideoCredits: 50,
+    aiVideoCredits: 15,
     postsPerDay: 2,
     features: [
       '100 faceless videos per month',
-      '50 AI video clips per month',
+      '15 AI video clips per month',
       'Post 2 videos/day across all platforms',
       'Everything in Starter',
       'Advanced subtitle styles & animations',
@@ -64,11 +64,11 @@ export const PLANS = {
     name: 'Creator Max',
     price: 129,
     credits: 300,
-    aiVideoCredits: 150,
+    aiVideoCredits: 50,
     postsPerDay: 4,
     features: [
       '300 faceless videos per month',
-      '150 AI video clips per month',
+      '50 AI video clips per month',
       'Post 4 videos/day across all platforms',
       'Everything in Pro',
       'Full autopilot mode',
@@ -83,20 +83,19 @@ export const PLANS = {
 // ── AI Video Constants ───────────────────────────────
 
 export const AI_VIDEO_LIMITS: Record<string, number> = {
-  starter: 20,
-  pro: 50,
-  creator_max: 150,
+  starter: 0,
+  pro: 15,
+  creator_max: 50,
 }
 
 export const AI_VIDEO_DURATION = {
   min: 10,
-  max: 15,
-  default: 15,
+  max: 10,
+  default: 10,
 } as const
 
 export const CRUN_AI_MODELS = {
-  sora2: 'openai/sora2',
-  sora2Pro: 'openai/sora2-pro',
+  wan25: 'wan/2-5-preview-t2v',
 } as const
 
 // Plan tier ranking for upgrade/downgrade comparison

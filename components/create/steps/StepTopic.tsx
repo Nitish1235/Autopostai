@@ -180,8 +180,7 @@ function StepTopic({
         {/* AI Video Duration selector */}
         {isAiVideo && (
           <div className="flex gap-1.5">
-            <span className="text-[12px] text-[var(--text-dim)] self-center mr-1">Duration:</span>
-            {[10, 15].map((d) => (
+            {[10].map((d) => (
               <button
                 key={d}
                 onClick={() => onAiDurationChange?.(d)}
