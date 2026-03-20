@@ -81,9 +81,11 @@ export function buildThumbnailCommand(params: {
   return [
     '-i', videoPath,
     '-ss', (timeOffset ?? 3).toString(),
-    '-vframes', '1',
+    '-frames:v', '1',
     '-q:v', '2',
+    '-pix_fmt', 'yuvj420p',
     '-vf', 'scale=540:960',
+    '-threads', '1',
     '-y',
     outputPath,
   ]

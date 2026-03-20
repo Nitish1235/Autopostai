@@ -17,8 +17,8 @@ const schema = z.object({
   imageStyle: z.string(),
   voiceId: z.string(),
   voiceSpeed: z.number().min(0.75).max(1.5),
-  musicMood: z.string(),
-  musicVolume: z.number().min(0).max(1),
+  musicMood: z.string().optional().default('motivational'),
+  musicVolume: z.number().min(0).max(1).optional().default(0.15),
   subtitleConfig: z.object({
     font: z.enum(['impact', 'inter', 'bebas', 'caveat', 'playfair', 'mono', 'nunito', 'barlow', 'cormorant', 'marker']),
     fontSize: z.number().min(10),

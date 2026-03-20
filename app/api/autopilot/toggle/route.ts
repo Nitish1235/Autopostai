@@ -36,13 +36,18 @@ export async function POST(request: Request) {
 
     const { enabled } = parsed.data
 
-    // Autopilot available on all plans
-
-    // Update config
+    // Update config and reset failures
     await prisma.autopilotConfig.upsert({
       where: { userId: userId },
-      create: { userId: userId, enabled },
-      update: { enabled },
+      create: {
+        userId: userId,
+        enabled,
+        consecutiveFailures: 0
+      },
+      update: {
+        enabled,
+        consecutiveFailures: 0
+      },
     })
 
     // If enabling and queue is empty: trigger topic generation
